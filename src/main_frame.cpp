@@ -31,7 +31,7 @@ curPalette(0),
 x(0),y(150),
 render(&cg, &parts)
 {
-	currState.spriteId = -1;
+	currState.layers = nullptr;
 	LoadSettings();
 	stbi_flip_vertically_on_write(true);
 }
@@ -86,6 +86,9 @@ void MainFrame::DrawBack()
 	render.x = (x+clientRect.x/2)/render.scale;
 	render.y = (y+clientRect.y/2)/render.scale;
 	render.Draw();
+
+	if(parts.loaded)
+		render.UpdateProj(clientRect.x, clientRect.y);
 
 	if(screenShot)
 	{
@@ -237,40 +240,22 @@ void MainFrame::RenderUpdate()
 		}
 
 		auto &frame =  seq->frames[currState.frame];
-		currState.spriteId = frame.AF.spriteId;
-		currState.usePat = frame.AF.usePat;
+		currState.layers = &frame.AF.layers;
 		render.GenerateHitboxVertices(frame.hitboxes);
-		render.offsetX = (frame.AF.offset_x)*1;
-		render.offsetY = (frame.AF.offset_y)*1;
-		render.SetImageColor(frame.AF.rgba);
-		render.rotX = frame.AF.rotation[0];
-		render.rotY = frame.AF.rotation[1];
-		render.rotZ = frame.AF.rotation[2];
-		render.scaleX = frame.AF.scale[0];
-		render.scaleY = frame.AF.scale[1];
+
+
 		if(frame.AF.loopCount>0)
 			loopCounter = frame.AF.loopCount;
 		
-		switch (frame.AF.blend_mode)
-		{
-		case 2:
-			render.blendingMode = Render::additive;
-			break;
-		case 3:
-			render.blendingMode = Render::substractive;
-			break;
-		default:
-			render.blendingMode = Render::normal;
-			break;
-		}
+
 	}
 	else
 	{
-		currState.spriteId = -1;
+		currState.layers = nullptr;
 		
 		render.DontDraw();
 	}
-	render.SwitchImage(currState.spriteId, currState.usePat);
+	render.SwitchImage(currState.layers);
 }
 
 void MainFrame::AdvancePattern(int dir)
@@ -419,7 +404,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 					{
 						currentFilePath.clear();
 						mainPane.RegenerateNames();
-						render.SwitchImage(-1);
+						render.SwitchImage(nullptr);
 					}
 				}
 			}
@@ -457,8 +442,9 @@ void MainFrame::Menu(unsigned int errorPopupId)
 			}
 
 			ImGui::Separator();
+			ImGui::TextDisabled("Save");
 			//TODO: Implement hotkeys, someday.
-			if (ImGui::MenuItem("Save"/* , "Ctrl+S" */)) 
+			/* if (ImGui::MenuItem("Save", "Ctrl+S")) 
 			{
 				if(currentFilePath.empty())
 					currentFilePath = FileDialog(fileType::HA6, true);
@@ -476,18 +462,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 					framedata.save(file.c_str());
 					currentFilePath = file;
 				}
-			}
-
-			#ifdef EXPORT2CHAR
-			if (ImGui::MenuItem("Export to char 0.99.3...")) 
-			{
-				std::string &&file = FileDialog(fileType::CHR, true);
-				if(!file.empty())
-				{
-					framedata.saveChar(file);
-				}
-			}
-			#endif
+			} */
 
 			ImGui::Separator();
 			if (ImGui::MenuItem("Load CG...")) 
@@ -499,7 +474,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 					{
 						ImGui::OpenPopup(errorPopupId);	
 					}
-					render.SwitchImage(-1);
+					render.SwitchImage(nullptr);
 				}
 			}
 
@@ -512,7 +487,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 					{
 						ImGui::OpenPopup(errorPopupId);	
 					}
-					render.SwitchImage(-1);
+					render.SwitchImage(nullptr);
 				}
 			}
 
@@ -525,7 +500,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 					{
 						ImGui::OpenPopup(errorPopupId);	
 					}
-					render.SwitchImage(-1);
+					render.SwitchImage(nullptr);
 				}
 			}
 
@@ -557,7 +532,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 				else if(curPalette < 0)
 					curPalette = 0;
 				if(cg.changePaletteNumber(curPalette))
-					render.SwitchImage(-1);
+					render.SwitchImage(nullptr);
 				ImGui::EndMenu();
 			}
 			if (ImGui::BeginMenu("Zoom level"))
@@ -574,7 +549,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 				if (ImGui::Checkbox("Bilinear", &smoothRender))
 				{
 					render.filter = smoothRender;
-					render.SwitchImage(-1);
+					render.SwitchImage(nullptr);
 				}
 				ImGui::EndMenu();
 			}

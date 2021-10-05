@@ -10,10 +10,12 @@ struct ImageData
 	bool bgr;
 	int offsetX;
 	int offsetY;
+	int csize = 0;
+	int compressionType = 0;
 
 	~ImageData()
 	{
-		delete[] pixels;
+		//delete[] pixels;
 	}
 };
 

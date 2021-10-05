@@ -88,6 +88,7 @@ void MainPane::Draw()
 				if(im::Button("Add frame"))
 				{
 					seq->frames.push_back({});
+					seq->frames.back().AF.layers.push_back({});
 					currState.frame = 0;
 				}
 				
@@ -137,7 +138,7 @@ void MainPane::Draw()
 				}
 				if (im::TreeNode("Animation data"))
 				{
-					AfDisplay(&frame.AF);
+					AfDisplay(&frame.AF, selectedLayer);
 					im::TreePop();
 					im::Separator();
 				}
@@ -204,13 +205,19 @@ void MainPane::Draw()
 
 			for(int i = ranges[0]; i <= ranges[1] && i >= 0 && i < seq->frames.size(); i++)
 			{
-				memcpy(seq->frames[i].AF.rgba, seq->frames[currState.frame].AF.rgba, sizeof(float)*4);
-				seq->frames[i].AF.blend_mode = seq->frames[currState.frame].AF.blend_mode;
+				auto &oAF = seq->frames[i].AF;
+				auto &iAF = seq->frames[currState.frame].AF;
+				auto &iLayer = iAF.layers[selectedLayer];
+				for(auto &oLayer : oAF.layers)
+				{
+					memcpy(oLayer.rgba, iLayer.rgba, sizeof(float)*4);
+					oLayer.blend_mode = iLayer.blend_mode;
+				}
 			}
 		}
 		if(im::Button("Paste transform"))
 		{
-			auto seq = frameData->get_sequence(currState.pattern);
+			/* auto seq = frameData->get_sequence(currState.pattern);
 			if(ranges[0] == ranges[1])
 				ranges[1] = seq->frames.size()-1;
 			
@@ -220,7 +227,7 @@ void MainPane::Draw()
 				seq->frames[i].AF.offset_y = seq->frames[currState.frame].AF.offset_y;
 				memcpy(seq->frames[i].AF.scale, seq->frames[currState.frame].AF.scale, sizeof(float)*2);
 				memcpy(seq->frames[i].AF.rotation, seq->frames[currState.frame].AF.rotation, sizeof(float)*3);
-			}
+			} */
 		}
 		im::End();
 	}

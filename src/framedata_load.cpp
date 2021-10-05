@@ -30,10 +30,22 @@ unsigned int *fd_frame_AT_load(unsigned int *data, const unsigned int *data_end,
 				std::cout << "ATGD "<<data[0]<<"\n";
 			} */
 			++data;
+		} else if (!memcmp(buf, "ATV2", 4)) { //uni
+			assert(data[0] == 3 && data[1] == 2);
+			data+=2;
+			for(int i = 0; i < 3*4; i+=4)
+			{
+				AT->hitVector[i/4] = data[i];
+				AT->hVFlags[i/4] = data[i+1];
+				AT->guardVector[i/4] = data[i+2];
+				AT->hVFlags[i/4] = data[i+3];
+			}
+			data += 12;
 		} else if (!memcmp(buf, "ATHS", 4)) {
 			AT->correction = data[0];
 			++data;
 		} else if (!memcmp(buf, "ATVV", 4)) {
+			assert(0); //deprecated?
 			short *d = (short *)data;
 			AT->red_damage = d[0];
 			AT->damage = d[1];
@@ -44,9 +56,13 @@ unsigned int *fd_frame_AT_load(unsigned int *data, const unsigned int *data_end,
 			AT->correction_type = data[0];
 			assert(data[0] >= 1 && data[0] <= 2);
 			data += 1;
+		} else if (!memcmp(buf, "ATHH", 4)) {
+			AT->correction2 = data[0];
+			data += 1;
 		} else if (!memcmp(buf, "ATGV", 4)) {
 			//First number can be different from 3. See CMHisui's 421C
 			//Second byte is a flag. Extract it separately.
+			assert(0); //Melty only?
 			assert(data[0] <= 3);
 			for(int i = 0; i < data[0]; i++)
 			{
@@ -56,7 +72,7 @@ unsigned int *fd_frame_AT_load(unsigned int *data, const unsigned int *data_end,
 			}
 			data += data[0]+1;
 		} else if (!memcmp(buf, "ATHV", 4)) {
-			//Same
+			assert(0); //Melty only?
 			assert(data[0] <= 3);
 			for(int i = 0; i < data[0]; i++)
 			{
@@ -73,6 +89,18 @@ unsigned int *fd_frame_AT_load(unsigned int *data, const unsigned int *data_end,
 				std::cout << "ATF1 "<< data[0]<<"\n";
 			} */
 			++data;
+		} else if (!memcmp(buf, "ATAT", 4)) {
+			AT->damage = *data;
+			data += 1;
+		} else if (!memcmp(buf, "ATAM", 4)) {
+			AT->minDamage = *data;
+			data += 1;
+		} else if (!memcmp(buf, "ATCA", 4)) {
+			AT->meter_gain = *data;
+			data += 1;
+		} else if (!memcmp(buf, "ATC0", 4)) {
+			memcpy(AT->hitStunDecay, data, sizeof(int)*3);
+			data += 3;
 		} else if (!memcmp(buf, "ATHE", 4)) {
 			AT->hitEffect = data[0];
 			AT->soundEffect = data[1];
@@ -99,6 +127,12 @@ unsigned int *fd_frame_AT_load(unsigned int *data, const unsigned int *data_end,
 			data++;
 		} else if (!memcmp(buf, "ATSP", 4)) {
 			AT->hitStop = data[0];
+			data++;
+		} else if (!memcmp(buf, "ATSA", 4)) {
+			AT->addHitStun = data[0];
+			data++;
+		} else if (!memcmp(buf, "ATSH", 4)) {
+			AT->hitStun = data[0];
 			data++;
 		} else if (!memcmp(buf, "ATGN", 4)) {
 			AT->blockStopTime = data[0];
@@ -178,6 +212,9 @@ unsigned int *fd_frame_AS_load(unsigned int *data, const unsigned int *data_end,
 				test.Print(data, data_end);
 				std::cout << "Counter T: "<<AS->counterType<<"\n";
 			}
+			data++;
+		} else if (!memcmp(buf, "ASCF", 4)) {
+			AS->ascf = data[0];
 			data++;
 		} else if (!memcmp(buf, "AST0", 4)) {
 			AS->sineFlags = data[0] & 0xFF; //Other values have no effect.
@@ -331,37 +368,60 @@ unsigned int *fd_frame_IF_load(unsigned int *data, const unsigned int *data_end,
 
 unsigned int *fd_frame_AF_load(unsigned int *data, const unsigned int *data_end, Frame *frame)
 {
-	frame->AF.spriteId = -1;
-	
-	//For UNI
-	int layerId = -1;
-	int spriteLayer = -1;
+	Layer *currentLayer = nullptr;
 
 	while (data < data_end) {
 		unsigned int *buf = data;
 		++data;
 		
-		if (!memcmp(buf, "AFGP", 4)) {
-			int *dt = (int *)data;
+		if (!memcmp(buf, "AFGP", 4)) { //Melty graphics
+			assert(0 && "AFGP");
+			/* int *dt = (int *)data;
 			frame->AF.spriteId = dt[1];
-			frame->AF.usePat = dt[0];
+			frame->AF.usePat = dt[0]; */
 			data += 2;
-		} else if (!memcmp(buf, "AFGX", 4)) { //UNI only
+		} else if (!memcmp(buf, "AFGX", 4)) { //UNI gfx
+			//There can be multiple of these.
 			int *dt = (int *)data;
-			//There can be multiple of these. Not gonna bother yet.
-			layerId = dt[0];
-			if(frame->AF.spriteId == -1 && dt[1] != 1)
-			{
-				frame->AF.spriteId = dt[2];
-				frame->AF.usePat = dt[1];
-				spriteLayer = dt[0];
-			}
+			assert(frame->AF.layers.size() == dt[0]);
+			frame->AF.layers.push_back({});
+			currentLayer = &frame->AF.layers.back();		
+			currentLayer->spriteId = dt[2];
+			currentLayer->usePat = dt[1];
+			assert(data[1] < 2);
 			data += 3;
-		} else if (!memcmp(buf, "AFOF", 4) && layerId == spriteLayer) {
+		} else if (!memcmp(buf, "AFOF", 4)) {
 			int *dt = (int *)data;
-			frame->AF.offset_y = dt[1];
-			frame->AF.offset_x = dt[0];
+			currentLayer->offset_y = dt[1];
+			currentLayer->offset_x = dt[0];
 			data += 2;
+		} else if (!memcmp(buf, "AFPL", 4)) {
+			currentLayer->priority = data[0];
+			data += 1;
+		} else if (!memcmp(buf, "AFAL", 4)) {
+			currentLayer->blend_mode = data[0];
+			currentLayer->rgba[3] = ((float)data[1])/255.f;
+			assert(data[0] >= 1 || data[0] <= 3 );
+			data += 2;
+		} else if (!memcmp(buf, "AFRG", 4)) {
+			currentLayer->rgba[0] = ((float)data[0])/255.f;
+			currentLayer->rgba[1] = ((float)data[1])/255.f;
+			currentLayer->rgba[2] = ((float)data[2])/255.f;
+			data += 3;
+		} else if (!memcmp(buf, "AFAZ", 4)) {
+			currentLayer->rotation[2] = *(float *)data;
+			++data;
+		} else if (!memcmp(buf, "AFAY", 4)) {
+			currentLayer->rotation[1] = *(float *)data;
+			++data;
+		} else if (!memcmp(buf, "AFAX", 4)) {
+			currentLayer->rotation[0] = *(float *)data;
+			++data;
+		} else if (!memcmp(buf, "AFZM", 4)) {
+			currentLayer->scale[0] = ((float *)data)[0];
+			currentLayer->scale[1] = ((float *)data)[1];
+			data += 2;
+		
 		} else if (!memcmp(buf, "AFD", 3)) {
 			char t = ((char *)buf)[3];
 			if (t >= '0' && t <= '9') {
@@ -370,66 +430,53 @@ unsigned int *fd_frame_AF_load(unsigned int *data, const unsigned int *data_end,
 				frame->AF.duration = data[0];
 				++data;
 			}
-		} else if (!memcmp(buf, "AFY", 3)) {
+		} else if (!memcmp(buf, "AFY", 3)) { //Probably deprecated
 			// 7/8/9/X/1/2/3 -> 7/8/9/10/11/12/13
 			// Overrides AFOF
-			frame->AF.offset_x = 0;
+			currentLayer->offset_x = 0;
 			char t = ((char *)buf)[3];
 			if (t >= '0' && t <= '9') {
 				int v = (t - '0');
 				if (v < 4) {
 					v += 10;
 				}
-				frame->AF.offset_y = v;
+				currentLayer->offset_y = v;
 			} else if (t == 'X') {
-				frame->AF.offset_y = 10;
+				currentLayer->offset_y = 10;
 			}
 		} else if (!memcmp(buf, "AFF", 3)) {
 			char t = ((char *)buf)[3];
 			if (t >= '1' && t <= '2') {
 				//Only values 1 and 2 are used.
 				frame->AF.aniType = t - '0';
+				assert(t - '0' <= 2);
+			} else if (t == 'L') {
+				frame->AF.aniType = data[0];
+				assert(data[0] == 3);
+				++data;
 			} else if (t == 'E') {
 				frame->AF.aniFlag = data[0];
+				assert(data[0] < 0x10); //Only lower four?
 				++data;
 			}
 			else {
 				test.Print(data, data_end);
 				std::cout <<"\tAFF uses uknown value: " << t <<"\n";
 			}
+		} else if (!memcmp(buf, "AFJH", 4)) {
+			frame->AF.afjh = data[0];
+			assert(data[0] == 1);
+			data += 1;
 
-		} else if (!memcmp(buf, "AFAL", 4) && layerId == spriteLayer) {
-			frame->AF.blend_mode = data[0];
-			frame->AF.rgba[3] = ((float)data[1])/255.f;
-			assert(data[0] >= 1 || data[0] <= 3 );
-			data += 2;
-		} else if (!memcmp(buf, "AFRG", 4) && layerId == spriteLayer) {
-			frame->AF.rgba[0] = ((float)data[0])/255.f;
-			frame->AF.rgba[1] = ((float)data[1])/255.f;
-			frame->AF.rgba[2] = ((float)data[2])/255.f;
-			data += 3;
-		} else if (!memcmp(buf, "AFAZ", 4) && layerId == spriteLayer) {
-			frame->AF.rotation[2] = *(float *)data;
-			
-			++data;
-		} else if (!memcmp(buf, "AFAY", 4) && layerId == spriteLayer) {
-			frame->AF.rotation[1] = *(float *)data;
-			
-			++data;
-		} else if (!memcmp(buf, "AFAX", 4) && layerId == spriteLayer) {
-			frame->AF.rotation[0] = *(float *)data;
-			
-			++data;
-		} else if (!memcmp(buf, "AFZM", 4) && layerId == spriteLayer) {
-			frame->AF.scale[0] = ((float *)data)[0];
-			frame->AF.scale[1] = ((float *)data)[1];
-			
-			data += 2;
 		} else if (!memcmp(buf, "AFJP", 4)) {
 			frame->AF.jump = data[0];
 			++data;
 		} else if (!memcmp(buf, "AFHK", 4)) {
 			frame->AF.interpolationType = data[0];
+			assert(data[0] <= 5);
+			++data;
+		} else if (!memcmp(buf, "AFPA", 4)) {
+			memcpy(frame->AF.param, data, sizeof(char)*4);
 			++data;
 		} else if (!memcmp(buf, "AFPR", 4)) {
 			frame->AF.priority = data[0];
@@ -443,14 +490,18 @@ unsigned int *fd_frame_AF_load(unsigned int *data, const unsigned int *data_end,
 		} else if (!memcmp(buf, "AFJC", 4)) {
 			frame->AF.landJump = data[0];
 			++data;
-		} else if (!memcmp(buf, "AFTN", 4) && layerId == spriteLayer) {
+		} else if (!memcmp(buf, "AFTN", 4)) {
 			//Overrides rotation
-			frame->AF.rotation[0] = data[0] ? 0.5f : 0.f;
-			frame->AF.rotation[1] = data[1] ? 0.5f : 0.f;
+			assert(0); //Deprecated?
+			currentLayer->rotation[0] = data[0] ? 0.5f : 0.f;
+			currentLayer->rotation[1] = data[1] ? 0.5f : 0.f;
 			data += 2;
 		} else if (!memcmp(buf, "AFRT", 4)) {
-			//Some fucked up interaction with rotation and scale.
+			//Some fucked up interaction with rotation and scale order.
 			frame->AF.AFRT = data[0];
+			++data;
+		} else if (!memcmp(buf, "AFID", 4)) {
+			frame->AF.frameId = data[0];
 			++data;
 		} else if (!memcmp(buf, "AFED", 4)) {
 			break;

@@ -7,6 +7,7 @@
 #include "shader.h"
 #include "vao.h"
 #include "hitbox.h"
+#include "framedata.h"
 #include <vector>
 #include <unordered_map>
 #include <glm/mat4x4.hpp>
@@ -14,7 +15,8 @@
 class Render
 {
 private:
-	glm::mat4 projection, view;
+	glm::mat4 projection, perspective;
+	glm::mat4 globalView = glm::mat4(1.f);
 	
 	CG *cg;
 	Parts *parts;
@@ -34,28 +36,24 @@ private:
 	int lAlphaS, lAddColorT;
 	Shader sSimple;
 	Shader sTextured;
-	Texture texture;
+	std::vector<Texture> textures;
+	std::vector<Layer> layers;
 	float colorRgba[4];
 
-	int curImageId;
-	bool curPat;
-	
-
 	void AdjustImageQuad(int x, int y, int w, int h);
-	void SetModelView(glm::mat4&& view);
-	void SetMatrix(int location);
+	void SetMatrix(int location, glm::mat4 view);
+	void SetMatrixPersp(int location, glm::mat4 view);
 	void SetBlendingMode();
 	
 	float iScale;
 
 public:
-	bool drawLines = true;
+	bool drawLines = true, drawBoxes = false;
 	bool filter;
-	int x, offsetX;
-	int y, offsetY;
-	float scale;
-	float scaleX, scaleY;
-	float rotX, rotY, rotZ;
+	int x = 0;
+	int y = 0;
+	float scale = 1;
+
 	int highLightN = -1;
 	
 	Render(CG* cg, Parts* parts);
@@ -63,7 +61,7 @@ public:
 	void UpdateProj(float w, float h);
 
 	void GenerateHitboxVertices(const BoxList &hitboxes);
-	void SwitchImage(int id, bool pat = false);
+	void SwitchImage(std::vector<Layer> *layers);
 	void DontDraw();
 	void SetImageColor(float *rgbaArr);
 	void SetScale(float scale);

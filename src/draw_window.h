@@ -7,8 +7,7 @@ struct FrameState
 {
 	int pattern;
 	int frame;
-	int spriteId;
-	bool usePat;
+	std::vector<Layer> *layers;
 	bool animating;
 	int animeSeq;
 };

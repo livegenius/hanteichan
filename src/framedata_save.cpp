@@ -12,7 +12,7 @@
 void WriteAF(std::ofstream &file, const Frame_AF *af)
 {
 	file.write("AFST", 4);
-
+/* 
 	file.write("AFGP", 4);
 	uint32_t pat = af->usePat;
 	file.write(VAL(pat), 4);
@@ -88,7 +88,7 @@ void WriteAF(std::ofstream &file, const Frame_AF *af)
 		file.write("AFZM", 4);
 		file.write(PTR(af->scale), 2*sizeof(float));
 	}
-
+ */
 	if(af->jump){
 		file.write("AFJP", 4);
 		file.write(VAL(af->jump), 4);

@@ -359,7 +359,7 @@ inline void AtDisplay(Frame_AT *at)
 
 }
 
-inline void AfDisplay(Frame_AF *af)
+inline void AfDisplay(Frame_AF *af, int &selectedLayer)
 {
 	const char* const interpolationList[] = {
 		"None",
@@ -378,12 +378,42 @@ inline void AfDisplay(Frame_AF *af)
 
 	constexpr float width = 50.f;
 
+	const int maxLayers = af->layers.size();
+	im::SliderInt("Layer", &selectedLayer, 0, maxLayers-1);
+	if(selectedLayer >= maxLayers)
+		selectedLayer = maxLayers-1;
+	if(selectedLayer < 0)
+		selectedLayer = 0;
+	auto *layer = &af->layers[selectedLayer];
+
 	im::SetNextItemWidth(width*3);
-	im::InputInt("Sprite", &af->spriteId);
+	im::InputInt("Sprite", &layer->spriteId);
 	im::SameLine(0, 20.f);
-	im::Checkbox("Use .pat", &af->usePat);
+	im::Checkbox("Use .pat", &layer->usePat);
 
 	im::Separator();
+
+	im::SetNextItemWidth(width);
+	im::DragInt("X", &layer->offset_x);
+	im::SameLine();
+	im::SetNextItemWidth(width);
+	im::DragInt("Y", &layer->offset_y);
+
+	int mode = layer->blend_mode-1;
+	if(mode < 1)
+		mode = 0;
+	if (im::Combo("Blend Mode", &mode, "Normal\0Additive\0Substractive\0"))
+	{
+		layer->blend_mode=mode+1;
+	}
+	im::ColorEdit4("Color", layer->rgba);
+
+	im::DragFloat3("Rot XYZ", layer->rotation, 0.005); 
+	im::DragFloat2("Scale", layer->scale, 0.1);
+	im::Separator();
+
+	im::Checkbox("Rotation keeps scale set by EF", &af->AFRT);
+	im::Checkbox("AFJH", &af->afjh);
 
 	unsigned int flagIndex = -1;
 	BitField("Animation flags", &af->aniFlag, &flagIndex, 4);
@@ -407,27 +437,6 @@ inline void AfDisplay(Frame_AF *af)
 	im::InputInt("End of loop", &af->loopEnd, 0, 0);
 	im::InputInt("Duration", &af->duration, 1, 0);
 
-	im::Separator();
-	im::Combo("Interpolation", &af->interpolationType, interpolationList, IM_ARRAYSIZE(interpolationList));
-
-	im::SetNextItemWidth(width);
-	im::DragInt("X", &af->offset_x);
-	im::SameLine();
-	im::SetNextItemWidth(width);
-	im::DragInt("Y", &af->offset_y);
-
-	int mode = af->blend_mode-1;
-	if(mode < 1)
-		mode = 0;
-	if (im::Combo("Blend Mode", &mode, "Normal\0Additive\0Substractive\0"))
-	{
-		af->blend_mode=mode+1;
-	}
-	im::ColorEdit4("Color", af->rgba);
-
-	im::DragFloat3("Rot XYZ", af->rotation, 0.005); 
-	im::DragFloat2("Scale", af->scale, 0.1);
-	im::Checkbox("Rotation keeps scale set by EF", &af->AFRT);
-
 	
+	im::Combo("Interpolation", &af->interpolationType, interpolationList, IM_ARRAYSIZE(interpolationList));
 }

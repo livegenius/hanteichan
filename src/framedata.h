@@ -10,41 +10,44 @@
 extern std::set<int> numberSet;
 extern int maxCount;
 
-struct Frame_AF {
-	// rendering data
+struct Layer{
 	int spriteId;
 	bool usePat;
+	int offset_y;
+	int offset_x;
+	int blend_mode;
+	float rgba[4]{1,1,1,1};
+	float rotation[3]{}; //XYZ
+	float scale[2]{1,1};//xy
+	int priority;
+};
 
-	int		offset_y;
-	int		offset_x;
-
+struct Frame_AF {
+	// rendering data
+	std::vector<Layer> layers;
 	int		duration;
-
 	/* Animation action
 	0 (default): End
 	1: Next
 	2: Jump to frame
+	3: Go to start of seq??
 	*/
-	int aniType;
+	int aniType; 
 
 	// Bit flags. First 4 bits only
 	unsigned int aniFlag;
 
 
-	int		blend_mode;
+	
 
-	float rgba[4]{1,1,1,1};
+	
 
-	float rotation[3]{}; //XYZ
-
-	float scale[2]{1,1};//xy
-
+	
 	//Depends on aniflag.
 	//If (0)end, it jumps to the number of the sequence
 	//If (2)jump, it jumps to the number of the frame of the seq.
 	//It seems to do nothing if the aniflag is 1(next).
 	int jump;
-
 	
 	int landJump; //Jumps to this frame if landing.
 	//1-5: Linear, Fast end, Slow end, Fast middle, Slow Middle. The last type is not used in vanilla
@@ -54,6 +57,11 @@ struct Frame_AF {
 	int loopEnd; //The frame number is not part of the loop.
 	
 	bool AFRT; //Makes rotation respect EF scale.
+
+	//New, from UNI
+	bool afjh;
+	uint8_t param[4]; //Let's hope they're right;
+	int frameId;
 };
 
 struct Frame_AS {
@@ -85,6 +93,8 @@ struct Frame_AS {
 	int sineParameters[4];
 	float sinePhases[2];
 	
+	//uni
+	int ascf; //related to counterhits or cancel?
 };
 
 struct Frame_AT {
@@ -123,6 +133,14 @@ struct Frame_AT {
 	int hitStopTime; //Default value zero. Overrides common values.
 	int hitStop; //From common value list
 	int blockStopTime; //Needs flag 16 (0 indexed) to be set
+
+	//Uni
+	int addHitStun;
+	int hitStun;
+	int hitStunDecay[3];
+	int correction2; //during combo?
+	int minDamage;
+	
 };
 
 struct Frame_EF {
@@ -176,7 +194,6 @@ public:
 	void initEmpty();
 	bool load(const char *filename, bool patch = false);
 	void save(const char *filename);
-	void saveChar(std::string filename);
 
 	//Probably unnecessary.
 	//bool load_move_list(Pack *pack, const char *filename);

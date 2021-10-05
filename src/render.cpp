@@ -96,11 +96,7 @@ imageVertex{
 	256, 256,  	0, 0,
 },
 colorRgba{1,1,1,1},
-curImageId(-1),
 quadsToDraw(0),
-x(0), offsetX(0),
-y(0), offsetY(0),
-rotX(0), rotY(0), rotZ(0),
 blendingMode(normal)
 {
 	std::cerr<<"Simple\n";
@@ -152,33 +148,27 @@ void Render::SetScale(float newScale)
 {
 	iScale = newScale;
 	scale = iScale;
-	if(curPat)
-		scale *= 0.5f;
+	/* if(curPat)
+		scale *= 0.5f; */
 }
 
+constexpr float tau = glm::pi<float>()*2.f;
 void Render::Draw()
 {
 	static unsigned int lastError = 0;
-	if(int err = glGetError() && lastError != err)
+	int err = glGetError();
+	if(err && lastError != err)
 	{
 		lastError = err;
 		std::stringstream ss;
 		ss << "GL Error: 0x" << std::hex << err << "\n";
 		std::cerr << ss.str()<<"\n";
-		//assert(0);
-		//MessageBoxA(nullptr, ss.str().c_str(), "GL Error", MB_ICONSTOP);
-		//PostQuitMessage(1);
 	}
 
-	
-
 	//Lines
-	glm::mat4 view = glm::mat4(1.f);
-	view = glm::scale(view, glm::vec3(scale, scale, 1.f));
-	view = glm::translate(view, glm::vec3(x,y,0.f));
-	SetModelView(std::move(view));
-	SetMatrix(lProjectionS);
-
+	globalView = glm::scale(glm::mat4(1.f), glm::vec3(scale, scale, 1.f));
+	globalView = glm::translate(globalView, glm::vec3(x,y,0.f));
+	SetMatrix(lProjectionS, globalView);
 	if(drawLines)
 	{
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
@@ -186,115 +176,190 @@ void Render::Draw()
 		vGeometry.Bind();
 		vGeometry.Draw(geoParts[LINES], 0, GL_LINES);
 	}
-	//Sprite
-	constexpr float tau = glm::pi<float>()*2.f;
-	view = glm::mat4(1.f);
-	view = glm::scale(view, glm::vec3(scale, scale, 1.f));
-	view = glm::translate(view, glm::vec3(x,y,0.f));
+
+	//Draw each layer
 	
-	view = glm::scale(view, glm::vec3(scaleX,scaleY,0));
-	view = glm::rotate(view, rotZ*tau, glm::vec3(0.0, 0.f, 1.f));
-	view = glm::rotate(view, rotY*tau, glm::vec3(0.0, 1.f, 0.f));
-	auto partView = view = glm::rotate(view, rotX*tau, glm::vec3(1.0, 0.f, 0.f));
-	view = glm::translate(view, glm::vec3(-128+offsetX,-224+offsetY,0.f));
-	partView = glm::translate(partView, glm::vec3(offsetX,offsetY,0.f));
-	sTextured.Use();
-	if(texture.isApplied)
+	int size = layers.size();
+	glDisable(GL_DEPTH_TEST);
+	for(int i = 0; i < size; ++i)
 	{
-		glUniform3f(lAddColorT, 0.f,0.f,0.f);
-		SetModelView(std::move(view));
-		SetMatrix(lProjectionT);
-		glBindTexture(GL_TEXTURE_2D, texture.id);
-		SetBlendingMode();
-		glDisableVertexAttribArray(2);
-		glVertexAttrib4fv(2, colorRgba);
-		vSprite.Bind();
-		vSprite.Draw(0);
+		auto &layer = layers[i];
+		auto &texture = textures[i];
+		if(!texture.isApplied && layer.usePat == 0)
+			continue;
+
+		glm::mat4 view = glm::scale(globalView, glm::vec3(layer.scale[0], layer.scale[1], 1.f));
+		view = glm::rotate(view, layer.rotation[2]*tau, glm::vec3(0.0, 0.f, 1.f));
+		view = glm::rotate(view, layer.rotation[1]*tau, glm::vec3(0.0, 1.f, 0.f));
+		view = glm::rotate(view, layer.rotation[0]*tau, glm::vec3(1.0, 0.f, 0.f));
+
+		sTextured.Use();
+		if(texture.isApplied)
+		{
+			view = glm::translate(view, glm::vec3(-128+layer.offset_x, -224+layer.offset_y, 0.f));
+			glUniform3f(lAddColorT, 0.f,0.f,0.f);
+			//if(i==)
+			SetMatrix(lProjectionT, view);
+			//SetMatrixPersp(lProjectionT, view);
+			glBindTexture(GL_TEXTURE_2D, texture.id);
+			switch (layer.blend_mode)
+			{
+				case 2:
+					blendingMode = Render::additive;
+					break;
+				case 3:
+					blendingMode = Render::substractive;
+					break;
+				default:
+					blendingMode = Render::normal;
+					break;
+			}
+			SetBlendingMode();
+			glDisableVertexAttribArray(2);
+			SetImageColor(layer.rgba);
+			glVertexAttrib4fv(2, colorRgba);
+			vSprite.Bind();
+			AdjustImageQuad(texture.offsetX, texture.offsetY, texture.w, texture.h);
+			vSprite.UpdateBuffer(0, imageVertex);
+			vSprite.Draw(0);
+		}
+		else
+		{
+			view = glm::translate(view, glm::vec3(layer.offset_x, layer.offset_y, 0.f));
+			glDisableVertexAttribArray(2);
+			parts->Draw(layer.spriteId, view, [this](glm::mat4 m){
+					SetMatrixPersp(lProjectionT, m);
+				},
+				[this](float r, float g, float b){
+					glUniform3f(lAddColorT,r,g,b);
+				},
+				colorRgba
+			);
+		}
 	}
-	else if(curPat)
-	{
-		glDisable(GL_DEPTH_TEST);
-		glDisableVertexAttribArray(2);
-		parts->Draw(curImageId, partView, [this](glm::mat4 m){			
-				SetModelView(std::move(m));
-				SetMatrix(lProjectionT);
-			},
-			[this](float r, float g, float b){
-				glUniform3f(lAddColorT,r,g,b);
-			},
-			colorRgba
-		);
-		glEnable(GL_DEPTH_TEST);
-	}
+	glEnable(GL_DEPTH_TEST);
+	
 	//Reset state
 	glBlendEquation(GL_FUNC_ADD);
 	sSimple.Use();
-	vGeometry.Bind();
-	if(screenShot)
+	if(drawBoxes)
 	{
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
-		glUniform1f(lAlphaS, 1.0f);
-		vGeometry.DrawQuads(GL_LINE_LOOP, quadsToDraw);
-		glUniform1f(lAlphaS, 0.5f);
-		vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
-	}
-	else
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-		glUniform1f(lAlphaS, 0.6f);
-		vGeometry.DrawQuads(GL_LINE_LOOP, quadsToDraw);
-		glUniform1f(lAlphaS, 0.3f);
-		vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
+		vGeometry.Bind();
+		if(screenShot)
+		{
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
+			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glUniform1f(lAlphaS, 1.0f);
+			vGeometry.DrawQuads(GL_LINE_LOOP, quadsToDraw);
+			glUniform1f(lAlphaS, 0.4f);
+			vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
+		}
+		else
+		{
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+			glUniform1f(lAlphaS, 0.6f);
+			vGeometry.DrawQuads(GL_LINE_LOOP, quadsToDraw);
+			glUniform1f(lAlphaS, 0.3f);
+			vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
+		}
 	}
 }
 
-void Render::SetModelView(glm::mat4&& view_)
-{
-	view = std::move(view_);
-}
-
-void Render::SetMatrix(int lProjection)
+void Render::SetMatrix(int lProjection, glm::mat4 view)
 {
 	glUniformMatrix4fv(lProjection, 1, GL_FALSE, glm::value_ptr(projection*view));
 }
 
-void Render::UpdateProj(float w, float h)
+void Render::SetMatrixPersp(int lProjection, glm::mat4 view)
 {
-	projection = glm::ortho<float>(0, w, h, 0, -1024.f, 1024.f);
+	glUniformMatrix4fv(lProjection, 1, GL_FALSE, glm::value_ptr(perspective*view));
 }
 
-void Render::SwitchImage(int id, bool pat)
+void Render::UpdateProj(float w, float h)
 {
-	if(id != curImageId || curPat != pat)
+	if(w == 0 || h == 0)
+		return;
+	
+	projection = glm::ortho<float>(0, w, h, 0, -1024.f, 1024.f);
+
+	//perspective = glm::perspective<float>(90, w / h, 1, 2048);
+	constexpr float pi = glm::pi<float>();
+
+	constexpr float dist = 1024;
+	constexpr float dist2 = dist*2; 
+	constexpr float f = 1;
+	perspective = glm::frustum<float>(-w/dist2, w/dist2, h/dist2, -h/dist2, 1*f, dist*2*f);
+	//perspective = glm::perspective<float>(90, w / h, 1, 2048);
+	perspective = glm::translate(perspective, glm::vec3(-w/2,-h/2,-dist*f));
+}
+
+void Render::SwitchImage(std::vector<Layer> *layers_)
+{	
+	if(!layers_)
 	{
-		curImageId = id;
-		curPat = pat;
-		if(texture.isApplied)
-			texture.Unapply();
-
-		scale = iScale;
-	//if(curPat)
-		
-		if(pat)
+		layers.clear();
+		return;
+	}
+	
+	bool identical = true;
+	if(layers.size() == layers_->size())
+	{
+		for(int i = 0; i < layers.size(); ++i)
+			if( layers[i].spriteId != (*layers_)[i].spriteId ||
+				layers[i].usePat != (*layers_)[i].usePat)
+			{
+				identical = false;
+				break;
+			}
+	}
+	else
+		identical = false;
+	
+	layers = *layers_;
+	if(!identical)
+	{
+		auto curSize = layers.size();
+		textures.clear();
+		textures.resize(curSize);
+		for(int i = 0; i < curSize; ++i)
 		{
-			scale *= 0.5f;
-			return;
+			auto &layer = layers[i];
+			auto &texture = textures[i];
+			if(layer.usePat)
+			{
+				//scale??
+				continue;
+/* 				auto gfx = parts->GetTexture(layer.spriteId);
+				if(gfx)
+				{
+					assert(gfx->s3tc);
+					size_t size;
+					if(gfx->type == 21)
+					{
+						texture.LoadDirect((char*)gfx->s3tc, gfx->w, gfx->h);
+					}
+					else
+					{
+						if(gfx->type == 5)
+							size = gfx->w*gfx->h;
+						else if(gfx->type == 1)
+							size = (gfx->w*gfx->h)*3/6;
+						else
+							assert(0);
+						texture.LoadCompressed((char*)gfx->s3tc, gfx->w, gfx->h,size, gfx->type);
+					}
+				} */
+			}
+			else
+			{
+				ImageData *image = cg->draw_texture(layer.spriteId, false, false);
+				if(!image)
+					continue;
+				texture.Load(image);
+				texture.Apply(false, filter);
+				texture.Unload(); //Deletes the resource
+			}
 		}
-
-		ImageData *image = nullptr;
-		image = cg->draw_texture(id, false, false);
-
-		if(!image)
-		{
-			return;
-		}
-
-		texture.Load(image); //Deletes the resource when done using it.
-		texture.Apply(false, filter);
-		
-		AdjustImageQuad(texture.image->offsetX, texture.image->offsetY, texture.image->width, texture.image->height);
-		vSprite.UpdateBuffer(0, imageVertex);
-		texture.Unload();
 	}
 }
 
@@ -382,7 +447,7 @@ void Render::DontDraw()
 	quadsToDraw = 0;
 }
 
-void Render::SetImageColor(float *rgba)
+void Render::SetImageColor(float *rgba) //deprecated?
 {
 	if(rgba)
 	{
@@ -402,11 +467,11 @@ void Render::SetBlendingMode()
 	{
 	default:
 	case normal:
-		//glBlendEquation(GL_FUNC_ADD);
-		//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		glBlendEquation(GL_FUNC_ADD);
+		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 		break;
 	case additive:
-		//glBlendEquation(GL_FUNC_ADD);
+		glBlendEquation(GL_FUNC_ADD);
 		glBlendFunc(GL_SRC_ALPHA, GL_ONE);
 		break;
 	case substractive:

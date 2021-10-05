@@ -7,11 +7,35 @@
 
 #include <glm/gtc/matrix_transform.hpp>
 
-struct counts_{
-	int p_name = 0;
-	int ppname = 0;
-	int pgname = 0;
-} counts;
+struct DDS_PIXELFORMAT
+{
+    uint32_t    size;
+    uint32_t    flags;
+    uint32_t    fourCC;
+    uint32_t    RGBBitCount;
+    uint32_t    RBitMask;
+    uint32_t    GBitMask;
+    uint32_t    BBitMask;
+    uint32_t    ABitMask;
+};
+
+struct DDS_HEADER
+{
+    uint32_t        size;
+    uint32_t        flags;
+    uint32_t        height;
+    uint32_t        width;
+    uint32_t        pitchOrLinearSize;
+    uint32_t        depth; // only if DDS_HEADER_FLAGS_VOLUME is set in flags
+    uint32_t        mipMapCount;
+    uint32_t        reserved1[11];
+    DDS_PIXELFORMAT ddspf;
+    uint32_t        caps;
+    uint32_t        caps2;
+    uint32_t        caps3;
+    uint32_t        caps4;
+    uint32_t        reserved2;
+};
 
 Parts::Parts() : partVertices(Vao::F2F2, GL_STATIC_DRAW)
 {
@@ -38,6 +62,29 @@ unsigned int* Parts::VeLoad(unsigned int *data, const unsigned int *data_end, in
 	return data;
 }
 
+bool Decrappress(unsigned char *cdata, unsigned char *outData, size_t csize, size_t outSize)
+{
+	int accum = 0;
+	size_t wi = 0;
+	for (size_t i = 0; i < csize; ++i)
+	{
+		if(wi > outSize)
+			return false;
+		if(cdata[i] == 0)
+		{
+			++i;
+			for(size_t j = 0; j < cdata[i+1]; ++j)
+				outData[wi++] = cdata[i];
+			i += 1;
+		}
+		else
+		{
+			outData[wi++] = cdata[i];
+		}
+	}
+	return true;
+}
+
 //Graphic data
 unsigned int* Parts::PgLoad(unsigned int *data, const unsigned int *data_end, int id)
 {
@@ -47,31 +94,44 @@ unsigned int* Parts::PgLoad(unsigned int *data, const unsigned int *data_end, in
 		++data;
 		if (!memcmp(buf, "PGNM", 4)) {
 			tex.name = (char*)data;
-			std::cout << counts.pgname <<" PG: "<<(char*)data << "\n";
+			std::cout << id <<" PG: "<<(char*)data << "\n";
 			data += 0x20/4;
-			counts.pgname +=1;
 		} else if (!memcmp(buf, "PGTP", 4)) {
-			tex.type = data[0];
+			//tex.type = data[0];
 			std::cout <<"\tGraphic type"<<tex.type <<"\n";
 			++data;
 		} else if (!memcmp(buf, "PGTE", 4)) { //UNI
 			//two shorts? Size again?
 			++data;
 		} else if (!memcmp(buf, "PGT2", 4)) { //UNI
-			//data[0] is size + 16?
-			//tex.w = data[1];
-			//tex.h = data[2];
+			//data[0] is size1 + 16?
+			tex.w = data[1];
+			tex.h = data[2];
 			data += 3;
-		} else if (!memcmp(buf, "DXT5", 4)) { //UNI
+
+			if(*data == 21)
+				tex.type = 21;
+			else if(!memcmp(data, "DXT1", 4))
+				tex.type = 1;
+			else if(!memcmp(data, "DXT5", 4))
+				tex.type = 5;
+
+			data+=1;
 			//??
-			int size = data[4];
+			int cSize = data[4]; //From 'DDS ' to PGED
+			int oSize = data[5]; //Uncompressed size.
 			data += 6;
 
-			char *cdata = (char *)data;
-			//TODO: Load DDS at cdata
-			tex.data = cdata;
-			cdata += size; //Length
-			data = (unsigned int *)cdata;
+			
+
+			unsigned char *cData = (unsigned char*)data;
+			auto oData = new unsigned char[oSize]; 
+			bool result = Decrappress(cData, oData, cSize, oSize);
+			DDS_HEADER *dds = (DDS_HEADER*)(oData+4);
+			tex.s3tc = oData+128;
+
+			cData += cSize;
+			data = (unsigned int *)cData;
 		} else if (!memcmp(buf, "PGTX", 4)) {
 			tex.w = data[0];
 			tex.h = data[1];
@@ -97,19 +157,22 @@ unsigned int* Parts::PgLoad(unsigned int *data, const unsigned int *data_end, in
 unsigned int* Parts::PpLoad(unsigned int *data, const unsigned int *data_end, int id)
 {
 	CutOut pp{};
+	std::string name;
 
 	while (data < data_end) {
 		unsigned int *buf = data;
 		++data;
 		if (!memcmp(buf, "PPNM", 4)) {
 			pp.name = (char*)data;
-			std::cout << counts.ppname <<" PP: "<<(char*)data << "\n";
+			std::cout << id <<" PP: "<<(char*)data << "\n";
 			data += 0x20/4;
-			counts.ppname +=1;
 		} else if (!memcmp(buf, "PPNA", 4)) { //UNI
 			//Non null terminated name. Sjis
 			unsigned char *cdata = (unsigned char *)data;
-			cdata += cdata[0]+1; //Length
+			name.resize(*cdata);
+			memcpy(name.data(), (cdata+1), *cdata);
+			std::cout << id <<" PP: "<< name << "\n";
+			cdata += *cdata+1; //Length
 			data = (unsigned int *)cdata;
 		}  else if (!memcmp(buf, "PPCC", 4)) {
 			//XY. Transform coordinates seem inverted because they're vertex coordinates.
@@ -132,12 +195,16 @@ unsigned int* Parts::PpLoad(unsigned int *data, const unsigned int *data_end, in
 			++data;
 		} else if (!memcmp(buf, "PPTP", 4)) {
 			//Texture reference id. Default is 0.
-			std::cout << "\t"<<"PPTP " << *data << "\t-";
+			if(name.empty())
+				std::cout << id <<" PP: ----\n";
+			std::cout << "\t"<<"PPTP " << *data << "\n";
 			pp.texture = *data;
 			++data;
+		} else if (!memcmp(buf, "PPPP", 4)) {
+			++data;
 		} else if (!memcmp(buf, "PPTX", 4)) {
+			assert(0); //melty only?
 			//No idea. Doesn't seem to do anything.
-			std::cout << "\t"<<"PPTX " << *data << "\n";
 			++data;
 		} else if (!memcmp(buf, "PPJP", 4)) {
 			//Some XY offset for when the part "grabs" the player
@@ -192,7 +259,8 @@ unsigned int* Parts::PrLoad(unsigned int *data, const unsigned int *data_end, in
 			++data;
 		} else if (!memcmp(buf, "PRAN", 4)) {
 			//Float, rotation, clockwise. 1.f = 360
-			pr.rotation = (*(float*)data);
+			assert(0); //Deprecated?
+			
 			++data;
 		} else if (!memcmp(buf, "PRPR", 4)) {
 			//Priority. Higher value means draw first / lower on the stack.
@@ -207,7 +275,9 @@ unsigned int* Parts::PrLoad(unsigned int *data, const unsigned int *data_end, in
 			//Color key
 			memcpy(pr.bgra, data, sizeof(char)*4);
 			++data;
-		} else if (!memcmp(buf, "PRA3", 4)) { //UNI
+		} else if (!memcmp(buf, "PRA3", 4)) { //UNI angle
+			//No idea what the first float is. Maybe something to do with animation.
+			memcpy(pr.rotation, data+1, sizeof(float)*3);
 			data += 4;
 		} else if (!memcmp(buf, "PRED", 4)) {
 			groups[groupId].push_back(pr);
@@ -224,20 +294,21 @@ unsigned int* Parts::PrLoad(unsigned int *data, const unsigned int *data_end, in
 //Contains many parts
 unsigned int* Parts::P_Load(unsigned int *data, const unsigned int *data_end, int id)
 {
-	const char* name = "";
+	std::string name;
 	bool hasData = false;
 	while (data < data_end) {
 		unsigned int *buf = data;
 		++data;
 		if (!memcmp(buf, "PANM", 4)) {
-			//A name?
+			//Melty name
 			name = (char*)data;
 			data += 0x20/4;
-			counts.p_name +=1;
 		} else if (!memcmp(buf, "PANA", 4)) { //UNI
 			//Non null terminated name
 			unsigned char *cdata = (unsigned char *)data;
-			cdata += cdata[0]+1; //Length
+			name.resize(cdata[0]); //Length at 0
+			memcpy(name.data(), cdata+1, cdata[0]);
+			cdata += cdata[0]+1; 
 			data = (unsigned int *)cdata;
 		} else if (!memcmp(buf, "PRST", 4)) {
 			groups.insert({id,{}});
@@ -295,7 +366,6 @@ unsigned int* Parts::MainLoad(unsigned int *data, const unsigned int *data_end)
 
 bool Parts::Load(const char *name)
 {
-	counts = {};
 	char *data;
 	unsigned int size;
 	if (!ReadInMem(name, data, size))
@@ -331,7 +401,28 @@ bool Parts::Load(const char *name)
 	{
 		auto &gfx = gfxKv.second;
 		textures.push_back(new Texture);
-		textures.back()->LoadDirect(gfx.data, gfx.w, gfx.h);
+		if(gfx.s3tc)
+		{
+			if(gfx.type == 21)
+			{
+				textures.back()->LoadDirect((char*)gfx.s3tc, gfx.w, gfx.h);
+			}
+			else
+			{
+				size_t size;
+				if(gfx.type == 5)
+					size = gfx.w*gfx.h;
+				else if(gfx.type == 1)
+					size = (gfx.w*gfx.h)*3/6;
+				else
+					assert(0);
+
+				textures.back()->LoadCompressed((char*)gfx.s3tc, gfx.w, gfx.h, size, gfx.type);
+			}
+			delete[] (gfx.s3tc-128);
+		}
+		else
+			textures.back()->LoadDirect(gfx.data, gfx.w, gfx.h);
 		gfx.textureIndex=textures.back()->id;
 	}
 
@@ -343,8 +434,8 @@ bool Parts::Load(const char *name)
 		auto &part = partKv.second;
 		constexpr int tX[] = {0,1,1, 1,0,0};
 		constexpr int tY[] = {0,0,1, 1,1,0};
-		constexpr int tXI[] = {1,0,0,0,1,1};
-		constexpr int tYI[] = {1,1,0,0,0,1,};
+		constexpr int tXI[] = {0,1,1, 1,0,0};
+		constexpr int tYI[] = {1,1,0, 0,0,1,};
 		struct{
 			float x,y,s,t;
 		}point[6];
@@ -386,6 +477,7 @@ bool Parts::Load(const char *name)
 	}
 
 	partVertices.Load();
+	loaded = true;
 	return true;
 }
 
@@ -393,7 +485,6 @@ void Parts::Draw(int pattern, const glm::mat4 &projection,
 	std::function<void(glm::mat4)> setMatrix,
 	std::function<void(float,float,float)> setAddColor, float color[4])
 {
-	static float f = 0.1;
 	curTexId = -1;
 	if(groups.count(pattern))
 	{
@@ -413,24 +504,24 @@ void Parts::Draw(int pattern, const glm::mat4 &projection,
 				//view = glm::translate(view, glm::vec3(-xy[0],part.y,0.f));
 				
 				view = glm::translate(view, glm::vec3(part.x,part.y,0.f));
- 				view = glm::rotate(view, (part.rotation)*tau, glm::vec3(0.0, 0.f, 1.f));
-				//view = glm::translate(view, glm::vec3(cutout.wh[0]/2,0.f,0.f));
-				auto dif = f;
-				//view = glm::translate(view, glm::vec3(dif,0.f,0.f));
+ 				view = glm::rotate(view, part.rotation[2]*tau, glm::vec3(0.0, 0.f, 1.f));
+				view = glm::rotate(view, part.rotation[1]*tau, glm::vec3(0.0, 1.f, 0.f));
+				view = glm::rotate(view, part.rotation[0]*tau, glm::vec3(1.0, 0.f, 0.f));
+
 				view = glm::scale(view, glm::vec3(-1.f, 1.f, 1.f));
 				view = glm::translate(view, glm::vec3(-cutout.wh[0]+cutout.xy[0]*2,0.f,0.f));
-				//view = glm::rotate(view, f*tau, glm::vec3(0.0, 0.f, 1.f));
-				//view = glm::translate(view, glm::vec3(-part.x*sin(part.rotation*tau), 1.f, 1.f));
-				f+=0.25;
 			}
 			else{
 				view = glm::translate(view, glm::vec3(part.x,part.y,0.f));
-				view = glm::rotate(view, part.rotation*tau, glm::vec3(0.0, 0.f, 1.f));
+				
+				view = glm::rotate(view, part.rotation[2]*tau, glm::vec3(0.0, 0.f, 1.f));
+				view = glm::rotate(view, part.rotation[1]*tau, glm::vec3(0.0, 1.f, 0.f));
+				view = glm::rotate(view, part.rotation[0]*tau, glm::vec3(1.0, 0.f, 0.f));
+				
 			}
 			
 			view = glm::scale(view, glm::vec3(part.scaleX, part.scaleY, 1.f));
 			
-			//setMatrix(glm::scale(projection, glm::vec3(0.75f,0.75f,1.f))*view);
 			setMatrix(projection*view);
 			if(screenShot)
 				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
@@ -465,21 +556,11 @@ void Parts::DrawPart(int i)
 	}
 }
 
-ImageData *Parts::GetTexture(unsigned int n)
+Parts::PartGfx *Parts::GetTexture(unsigned int n)
 {
-	if(n >= 0 && n < gfxMeta.size())
+	if(gfxMeta.count(n))
 	{
-		ImageData *texture = new ImageData{};
-		texture->width = gfxMeta[n].w;
-		texture->height = gfxMeta[n].h;
-		texture->bgr = true;
-
-		size_t size = texture->width*texture->height*4;
-		texture->pixels = new unsigned char[size];
-		memcpy(texture->pixels, gfxMeta[n].data, size);
-
-		return texture;
+		return &gfxMeta[n];
 	}
-
 	return nullptr;
 } 

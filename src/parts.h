@@ -10,7 +10,7 @@
 #include <glm/mat4x4.hpp>
 
 class Parts{
-private:
+public:
 	char *data = nullptr;
 
 	//Box cut-out
@@ -34,11 +34,12 @@ private:
 		int bpp;
 		int type;
 		int textureIndex;
+		unsigned char* s3tc = nullptr;
 	};
 
 	struct PartProperty{
 		float priority;
-		float rotation;
+		float rotation[3];
 		float x;
 		float y;
 		float scaleX = 1.f;
@@ -69,10 +70,12 @@ private:
 	void DrawPart(int id);
 	
 public:
+	bool loaded = false;
+
 	Parts();
 	bool Load(const char *name);
 
-	ImageData *GetTexture(unsigned int n);
+	PartGfx *GetTexture(unsigned int n);
 	void Draw(int pattern, const glm::mat4 &projection, std::function<void(glm::mat4)> setMatrix,
 		std::function<void(float,float,float)> setAddColor, float color[4]);
 	

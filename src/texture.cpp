@@ -34,6 +34,10 @@ void Texture::Load(ImageData *data)
 {
 	const char *palette = nullptr;
 	image.reset(data);
+	w = image->width;
+	h = image->height;
+	offsetX = image->offsetX;
+	offsetY = image->offsetY;
 	isLoaded = true;
 }
 
@@ -56,6 +60,35 @@ void Texture::LoadDirect(char *data, int w, int h, bool bgr)
 	GLenum intType = GL_RGBA8;
 	
 	glTexImage2D(GL_TEXTURE_2D, 0, intType, w, h, 0, extType, GL_UNSIGNED_BYTE, data);
+}
+
+void Texture::LoadCompressed(char *data, int w, int h, int compressedSize, int type)
+{
+	this->w = w;
+	this->h = h;
+	isApplied = true;
+	glGenTextures(1, &id);
+
+	glBindTexture(GL_TEXTURE_2D, id);
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT );
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT );
+
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+
+	if(compressedSize > 0)
+	{
+		GLenum intType;
+		if(type == 1)
+			intType = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+		else
+			intType = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+		glCompressedTexImage2D(GL_TEXTURE_2D, 0, intType, w, h, 0, compressedSize, data);
+		isApplied = true;
+	}
+	else
+		glDeleteTextures(GL_TEXTURE_2D, &id);
 }
 
 void Texture::Apply(bool repeat, bool linearFilter)
@@ -89,8 +122,24 @@ void Texture::Apply(bool repeat, bool linearFilter)
 	if(image->bgr)
 		extType = GL_BGRA;
 	GLenum intType = GL_RGBA8;
+
+	static int offset = 0;
+
+	if(image->csize > 0)
+	{
+		if(image->compressionType == 1)
+			intType = GL_COMPRESSED_RGBA_S3TC_DXT1_EXT;
+		else
+			intType = GL_COMPRESSED_RGBA_S3TC_DXT5_EXT;
+		glCompressedTexImage2D(GL_TEXTURE_2D, 0, intType, image->width, image->height, 0, image->csize, image->pixels);
+		++offset;
+	}
+	else
+		glTexImage2D(GL_TEXTURE_2D, 0, intType, image->width, image->height, 0, extType, GL_UNSIGNED_BYTE, image->pixels);
+
 	
-	glTexImage2D(GL_TEXTURE_2D, 0, intType, image->width, image->height, 0, extType, GL_UNSIGNED_BYTE, image->pixels);
+	if(offset>16)
+		offset = 0;
 }
 
 void Texture::Unapply()
