@@ -48,7 +48,7 @@ private:
 	float iScale;
 
 public:
-	bool drawLines = true, drawBoxes = false;
+	bool drawLines = true, drawBoxes = true;
 	bool filter;
 	int x = 0;
 	int y = 0;

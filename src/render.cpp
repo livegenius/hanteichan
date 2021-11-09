@@ -245,23 +245,17 @@ void Render::Draw()
 	if(drawBoxes)
 	{
 		vGeometry.Bind();
-		if(screenShot)
-		{
+		if(screenShot){
 			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
-			//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glUniform1f(lAlphaS, 1.0f);
-			vGeometry.DrawQuads(GL_LINE_LOOP, quadsToDraw);
-			glUniform1f(lAlphaS, 0.4f);
-			vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
 		}
-		else
-		{
+		else{
 			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-			glUniform1f(lAlphaS, 0.6f);
-			vGeometry.DrawQuads(GL_LINE_LOOP, quadsToDraw);
-			glUniform1f(lAlphaS, 0.3f);
-			vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
 		}
+		glUniform1f(lAlphaS, 0.6f);
+		vGeometry.DrawQuads(GL_LINE_LOOP, quadsToDraw);
+		glUniform1f(lAlphaS, 0.3f);
+		vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
+		
 	}
 }
 

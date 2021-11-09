@@ -26,7 +26,7 @@ struct DDS_HEADER
     uint32_t        height;
     uint32_t        width;
     uint32_t        pitchOrLinearSize;
-    uint32_t        depth; // only if DDS_HEADER_FLAGS_VOLUME is set in flags
+    uint32_t        depth;
     uint32_t        mipMapCount;
     uint32_t        reserved1[11];
     DDS_PIXELFORMAT ddspf;
@@ -94,17 +94,17 @@ unsigned int* Parts::PgLoad(unsigned int *data, const unsigned int *data_end, in
 		++data;
 		if (!memcmp(buf, "PGNM", 4)) {
 			tex.name = (char*)data;
-			std::cout << id <<" PG: "<<(char*)data << "\n";
+			//std::cout << id <<" PG: "<<(char*)data << "\n";
 			data += 0x20/4;
 		} else if (!memcmp(buf, "PGTP", 4)) {
 			//tex.type = data[0];
-			std::cout <<"\tGraphic type"<<tex.type <<"\n";
+			//std::cout <<"\tGraphic type"<<tex.type <<"\n";
 			++data;
 		} else if (!memcmp(buf, "PGTE", 4)) { //UNI
 			//two shorts? Size again?
 			++data;
 		} else if (!memcmp(buf, "PGT2", 4)) { //UNI
-			//data[0] is size1 + 16?
+			unsigned int someSize = data[0]; // is size1 + 16?
 			tex.w = data[1];
 			tex.h = data[2];
 			data += 3;
@@ -115,29 +115,40 @@ unsigned int* Parts::PgLoad(unsigned int *data, const unsigned int *data_end, in
 				tex.type = 1;
 			else if(!memcmp(data, "DXT5", 4))
 				tex.type = 5;
+			else
+				assert(0 && "Unknown texture type");
 
 			data+=1;
-			//??
-			int cSize = data[4]; //From 'DDS ' to PGED
-			int oSize = data[5]; //Uncompressed size.
-			data += 6;
 
-			
+			if(tex.type == 5 && someSize == tex.w*tex.h+128) //uncompressed?
+			{
+				data += 2; //skip unknown shit
+				tex.s3tc = ((unsigned char*)data)+128;
+				tex.dontDelete = true;
+				data += tex.w*tex.h;
+			}
+			else 
+			{
+				int cSize = data[4]; //From 'DDS ' to PGED
+				int oSize = data[5]; //Uncompressed size.
+				data += 6;
 
-			unsigned char *cData = (unsigned char*)data;
-			auto oData = new unsigned char[oSize]; 
-			bool result = Decrappress(cData, oData, cSize, oSize);
-			DDS_HEADER *dds = (DDS_HEADER*)(oData+4);
-			tex.s3tc = oData+128;
+				unsigned char *cData = (unsigned char*)data;
+				auto oData = new unsigned char[oSize]; 
+				bool result = Decrappress(cData, oData, cSize, oSize);
+				assert(result);
+				DDS_HEADER *dds = (DDS_HEADER*)(oData+4);
+				tex.s3tc = oData+128;
 
-			cData += cSize;
-			data = (unsigned int *)cData;
+				cData += cSize;
+				data = (unsigned int *)cData;
+			}
 		} else if (!memcmp(buf, "PGTX", 4)) {
 			tex.w = data[0];
 			tex.h = data[1];
 			tex.bpp = data[2];
 			tex.data = (char*)(data+3);
-			std::cout <<"\t"<<tex.w <<"x" <<tex.h <<" "<<tex.bpp<<"bpp\n";
+			//std::cout <<"\t"<<tex.w <<"x" <<tex.h <<" "<<tex.bpp<<"bpp\n";
 
 			assert(tex.bpp == 32);
 			data += (tex.w * tex.h) + 3;
@@ -147,7 +158,7 @@ unsigned int* Parts::PgLoad(unsigned int *data, const unsigned int *data_end, in
 		} else {
 			char tag[5]{};
 			memcpy(tag,buf,4);
-			std::cout <<"\tUnknown PG level tag: " << tag <<"\n";
+			//std::cout <<"\tUnknown PG level tag: " << tag <<"\n";
 		}
 	}
 	return data;
@@ -164,14 +175,14 @@ unsigned int* Parts::PpLoad(unsigned int *data, const unsigned int *data_end, in
 		++data;
 		if (!memcmp(buf, "PPNM", 4)) {
 			pp.name = (char*)data;
-			std::cout << id <<" PP: "<<(char*)data << "\n";
+			//std::cout << id <<" PP: "<<(char*)data << "\n";
 			data += 0x20/4;
 		} else if (!memcmp(buf, "PPNA", 4)) { //UNI
 			//Non null terminated name. Sjis
 			unsigned char *cdata = (unsigned char *)data;
 			name.resize(*cdata);
 			memcpy(name.data(), (cdata+1), *cdata);
-			std::cout << id <<" PP: "<< name << "\n";
+			//std::cout << id <<" PP: "<< name << "\n";
 			cdata += *cdata+1; //Length
 			data = (unsigned int *)cdata;
 		}  else if (!memcmp(buf, "PPCC", 4)) {
@@ -195,9 +206,9 @@ unsigned int* Parts::PpLoad(unsigned int *data, const unsigned int *data_end, in
 			++data;
 		} else if (!memcmp(buf, "PPTP", 4)) {
 			//Texture reference id. Default is 0.
-			if(name.empty())
+			/* if(name.empty())
 				std::cout << id <<" PP: ----\n";
-			std::cout << "\t"<<"PPTP " << *data << "\n";
+			std::cout << "\t"<<"PPTP " << *data << "\n"; */
 			pp.texture = *data;
 			++data;
 		} else if (!memcmp(buf, "PPPP", 4)) {
@@ -276,7 +287,7 @@ unsigned int* Parts::PrLoad(unsigned int *data, const unsigned int *data_end, in
 			memcpy(pr.bgra, data, sizeof(char)*4);
 			++data;
 		} else if (!memcmp(buf, "PRA3", 4)) { //UNI angle
-			//No idea what the first float is. Maybe something to do with animation.
+			//No idea what the first float is. Don't think it's a quaternion.
 			memcpy(pr.rotation, data+1, sizeof(float)*3);
 			data += 4;
 		} else if (!memcmp(buf, "PRED", 4)) {
@@ -324,8 +335,8 @@ unsigned int* Parts::P_Load(unsigned int *data, const unsigned int *data_end, in
 			std::cout <<"\tUnknown P_ level tag: " << tag <<"\n";
 		}
 	}
-	if(hasData)
-		std::cout << id <<" _P: "<< name << "\n";
+	/* if(hasData)
+		std::cout << id <<" _P: "<< name << "\n"; */
 	return data;
 }
 
@@ -419,7 +430,8 @@ bool Parts::Load(const char *name)
 
 				textures.back()->LoadCompressed((char*)gfx.s3tc, gfx.w, gfx.h, size, gfx.type);
 			}
-			delete[] (gfx.s3tc-128);
+			if(!gfx.dontDelete)
+				delete[] (gfx.s3tc-128);
 		}
 		else
 			textures.back()->LoadDirect(gfx.data, gfx.w, gfx.h);
@@ -442,7 +454,7 @@ bool Parts::Load(const char *name)
 
 		if(gfxMeta.count(part.texture) == 0)
 		{
-			std::cout << "There's no graphic id "<< part.texture<<" requested by part id "<<partKv.first<<"\n";
+			//std::cout << "There's no graphic id "<< part.texture<<" requested by part id "<<partKv.first<<"\n";
 			continue;
 		}
 		float width = 256;//gfxMeta[part.texture].w/2.f;
@@ -497,9 +509,9 @@ void Parts::Draw(int pattern, const glm::mat4 &projection,
 			constexpr float tau = glm::pi<float>()*2.f;
 			glm::mat4 view = glm::mat4(1.f);
 			
+			//FIXME: Transformations are broken.
 			if(part.reverse)
 			{
-				//f+=0.5;
 				auto cutout = cutOuts[part.ppId];
 				//view = glm::translate(view, glm::vec3(-xy[0],part.y,0.f));
 				

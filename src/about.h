@@ -57,6 +57,7 @@ public:
 				"Z", "Previous box",
 				"P", "Output current view as image",
 				"L", "Toggle axis",
+				"H", "Toggle hitboxes",
 				"F", "Hide user interface",
 				"-","-",
 				"Right click & drag", "Draw box",

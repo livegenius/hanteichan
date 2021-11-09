@@ -14,5 +14,6 @@ inline void PatternDisplay(Sequence *seq)
 	ImGui::InputInt("Level", &seq->level, 0, 0);
 
 	ImGui::SetNextItemWidth(80.f);
-	ImGui::InputInt("PFLG", &seq->flag, 0, 0);
+	//ImGui::InputInt("PFLG", &seq->flag, 0, 0); Unused by the game.
+	ImGui::InputInt("PUPS", &seq->pups, 0, 0);
 }

@@ -4,6 +4,7 @@
 #include "filedialog.h"
 #include "ini.h"
 
+#include <cmath>
 #include <fstream>
 #include <filesystem>
 #include <sstream>
@@ -96,6 +97,15 @@ void MainFrame::DrawBack()
 		size_t size = clientRect.x*clientRect.y*4;
 		unsigned char* imageData = new unsigned char[size];
 		glReadPixels(0, 0, clientRect.x, clientRect.y, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
+		for(int i = 0; i<clientRect.x*clientRect.y*4; i+=4) //Fix bad transparency issue.
+		{
+			auto& alpha = imageData[i+3];
+			auto alphaFactor = pow((double)alpha/255.0, 1.0/4.5);
+			alpha = alphaFactor *255;
+			imageData[i] /= alphaFactor;
+			imageData[i+1] /= alphaFactor;
+			imageData[i+2] /= alphaFactor;
+		}
 		//auto res = stbi_write_png("test.png", clientRect.x, clientRect.y, 4, imageData, 0);
 		int len;
 		unsigned char* outData = stbi_write_png_to_mem(imageData, 0, clientRect.x, clientRect.y, 4, &len);
@@ -305,7 +315,7 @@ void MainFrame::RightClick(int x_, int y_)
 
 bool MainFrame::HandleKeys(uint64_t vkey)
 {
-	//bool ctrlDown = GetAsyncKeyState(VK_CONTROL) & 0x8000; 
+	bool ctrlDown = GetAsyncKeyState(VK_CONTROL) & 0x8000; 
 	switch (vkey)
 	{
 	case VK_UP:
@@ -334,6 +344,20 @@ bool MainFrame::HandleKeys(uint64_t vkey)
 		return true;
 	case 'L':
 		render.drawLines = !render.drawLines;
+		return true;
+	case 'H':
+		render.drawBoxes = !render.drawBoxes;
+		return true;
+	}
+
+	if(ctrlDown && vkey == 'S')
+	{
+		if(currentFilePath.empty())
+			currentFilePath = FileDialog(fileType::HA6, true);
+		if(!currentFilePath.empty())
+		{
+			framedata.save(currentFilePath.c_str());
+		}
 		return true;
 	}
 	return false;
@@ -443,9 +467,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 			}
 
 			ImGui::Separator();
-			ImGui::TextDisabled("Save");
-			//TODO: Implement hotkeys, someday.
-			/* if (ImGui::MenuItem("Save", "Ctrl+S")) 
+			if (ImGui::MenuItem("Save", "Ctrl+S")) 
 			{
 				if(currentFilePath.empty())
 					currentFilePath = FileDialog(fileType::HA6, true);
@@ -463,7 +485,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 					framedata.save(file.c_str());
 					currentFilePath = file;
 				}
-			} */
+			}
 
 			ImGui::Separator();
 			if (ImGui::MenuItem("Load CG...")) 

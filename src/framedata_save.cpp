@@ -6,23 +6,74 @@
 #define PTR(X) ((const char*)X)
 
 // The order of these things is a bit different from the order the original game files use.
-// (Because I haven't figured out the proper order lol)
 // I don't know if it can cause trouble but it's something to keep in mind.
 
 void WriteAF(std::ofstream &file, const Frame_AF *af)
 {
 	file.write("AFST", 4);
-/* 
-	file.write("AFGP", 4);
-	uint32_t pat = af->usePat;
-	file.write(VAL(pat), 4);
-	file.write(VAL(af->spriteId), 4);
 
-	//AFY can fuck off
-	if(af->offset_x || af->offset_y){
-		file.write("AFOF", 4);
-		file.write(VAL(af->offset_x), 4);
-		file.write(VAL(af->offset_y), 4);
+	for(int i = 0; i < af->layers.size(); i++)
+	{
+		const auto &l = af->layers[i];
+		file.write("AFGX", 4);
+		file.write(VAL(i), 4);
+		uint32_t pat = l.usePat;
+		file.write(VAL(pat), 4);
+		file.write(VAL(l.spriteId), 4);
+
+		if(l.offset_x || l.offset_y){
+			file.write("AFOF", 4);
+			file.write(VAL(l.offset_x), 4);
+			file.write(VAL(l.offset_y), 4);
+		}
+
+		if(l.priority){
+			file.write("AFPR", 4);
+			file.write(VAL(l.priority), 4);
+		}
+
+		if(l.blend_mode){
+			file.write("AFAL", 4);
+			int anormalized = l.rgba[3]*255.;
+			file.write(VAL(l.blend_mode), 4);
+			file.write(VAL(anormalized), 4);
+		}
+		else if (l.rgba[3] != 1.f){
+			int type = 1;
+			int anormalized = l.rgba[3]*255.f;
+			file.write("AFAL", 4);
+			file.write(VAL(type), 4);
+			file.write(VAL(anormalized), 4);
+		}
+
+		if(	l.rgba[0] != 1.f ||
+			l.rgba[1] != 1.f ||
+			l.rgba[2] != 1.f)
+		{
+			int anormalized[3];
+			for(int i = 0; i < 3; i++)
+				anormalized[i] = l.rgba[i]*255.f;
+			file.write("AFRG", 4);
+			file.write(PTR(anormalized), 3*sizeof(float));
+		}
+
+		if(l.rotation[0]){
+			file.write("AFAX", 4);
+			file.write(VAL(l.rotation[0]), sizeof(float));
+		}
+		if(l.rotation[1]){
+			file.write("AFAY", 4);
+			file.write(VAL(l.rotation[1]), sizeof(float));
+		}
+		if(l.rotation[2]){
+			file.write("AFAZ", 4);
+			file.write(VAL(l.rotation[2]), sizeof(float));
+		}
+		if(	l.scale[0] != 1.f ||
+			l.scale[1] != 1.f){
+			file.write("AFZM", 4);
+			file.write(PTR(l.scale), 2*sizeof(float));
+		}
 	}
 
 	if(af->duration >=0 && af->duration < 10){
@@ -36,59 +87,27 @@ void WriteAF(std::ofstream &file, const Frame_AF *af)
 	}
 
 	if(af->aniType){
-		char t = af->aniType + '0';
-		file.write("AFF", 3);
-		file.write(VAL(t), 1);
+		if(af->aniType <= 2)
+		{
+			char t = af->aniType + '0';
+			file.write("AFF", 3);
+			file.write(VAL(t), 1);
+		}
+		else
+		{
+			file.write("AFFL", 4);
+			file.write(VAL(af->aniType), 4);
+		}
 	}
-
 	if(af->aniFlag){
 		file.write("AFFE", 4);
 		file.write(VAL(af->aniFlag), 4);
 	}
-
-	if(af->blend_mode){
-		file.write("AFAL", 4);
-		int anormalized = af->rgba[3]*255.f;
-		file.write(VAL(af->blend_mode), 4);
-		file.write(VAL(anormalized), 4);
+	if(af->afjh){
+		file.write("AFJH", 4);
+		int AFJH = af->afjh;
+		file.write(VAL(AFJH), 4);
 	}
-	else if (af->rgba[3] != 1.f){
-		int type = 1;
-		int anormalized = af->rgba[3]*255.f;
-		file.write("AFAL", 4);
-		file.write(VAL(type), 4);
-		file.write(VAL(anormalized), 4);
-	}
-
-	if(	af->rgba[0] != 1.f ||
-		af->rgba[1] != 1.f ||
-		af->rgba[2] != 1.f)
-	{
-		int anormalized[3];
-		for(int i = 0; i < 3; i++)
-			anormalized[i] = af->rgba[i]*255.f;
-		file.write("AFRG", 4);
-		file.write(PTR(anormalized), 3*sizeof(float));
-	}
-
-	if(af->rotation[0]){
-		file.write("AFAX", 4);
-		file.write(VAL(af->rotation[0]), sizeof(float));
-	}
-	if(af->rotation[1]){
-		file.write("AFAY", 4);
-		file.write(VAL(af->rotation[1]), sizeof(float));
-	}
-	if(af->rotation[2]){
-		file.write("AFAZ", 4);
-		file.write(VAL(af->rotation[2]), sizeof(float));
-	}
-	if(	af->scale[0] != 1.f ||
-		af->scale[1] != 1.f){
-		file.write("AFZM", 4);
-		file.write(PTR(af->scale), 2*sizeof(float));
-	}
- */
 	if(af->jump){
 		file.write("AFJP", 4);
 		file.write(VAL(af->jump), 4);
@@ -96,6 +115,15 @@ void WriteAF(std::ofstream &file, const Frame_AF *af)
 	if(af->interpolationType){
 		file.write("AFHK", 4);
 		file.write(VAL(af->interpolationType), 4);
+	}
+	if(af->frameId){
+		file.write("AFID", 4);
+		file.write(VAL(af->frameId), 4);
+	}
+	if(memcmp(af->param, "\0\0\0\0", 4))
+	{
+		file.write("AFPA", 4);
+		file.write(PTR(af->param), 4);
 	}
 	if(af->priority){
 		file.write("AFPR", 4);
@@ -118,6 +146,7 @@ void WriteAF(std::ofstream &file, const Frame_AF *af)
 		file.write("AFRT", 4);
 		file.write(VAL(val), 4);
 	}
+	
 	
 	file.write("AFED", 4);
 }
@@ -168,6 +197,11 @@ void WriteAS(std::ofstream &file, const Frame_AS *as)
 		file.write("ASCT", 4);
 		file.write(VAL(as->counterType), 4);
 	}
+	if(as->ascf)
+	{
+		file.write("ASCF", 4);
+		file.write(VAL(as->ascf), 4);
+	}
 	if(as->statusFlags[0])
 	{
 		file.write("ASF0", 4);
@@ -211,44 +245,51 @@ void WriteAT(std::ofstream &file, const Frame_AT *at)
 		file.write("ATGD", 4);
 		file.write(VAL(at->guard_flags), 4);
 	}
+	{ //Always
+		constexpr int sizes[2] = {3,2};
+		file.write("ATV2", 4);
+		file.write(PTR(sizes), 2*4);
+		for(int i = 0; i < 3; i++)
+		{
+			file.write(VAL(at->hVFlags[i]), 4);
+			file.write(VAL(at->hitVector[i]), 4);
+			file.write(VAL(at->gVFlags[i]), 4);
+			file.write(VAL(at->guardVector[i]), 4);
+		}
+	}
 	if(at->correction != 100){
 		file.write("ATHS", 4);
 		file.write(VAL(at->correction), 4);
-	}
-	{ //Always
-		short d[4];
-		d[0] = at->red_damage;
-		d[1] = at->damage;
-		d[2] = at->guard_damage;
-		d[3] = at->meter_gain;
-		file.write("ATVV", 4);
-		file.write(PTR(d), 2*4);
 	}
 	if(at->correction_type){
 		file.write("ATHT", 4);
 		file.write(VAL(at->correction_type), 4);
 	}
-	if(true){
-		constexpr int three = 3;
-		int val[three];
-		
-		file.write("ATHV", 4);
-		file.write(VAL(three), 4);
-		for(int i = 0; i < 3; i++)
-			val[i] = at->hitVector[i] | (at->hVFlags[i] << 8);
-
-		file.write(PTR(val), sizeof(val));
-
-		file.write("ATGV", 4);
-		file.write(VAL(three), 4);
-		for(int i = 0; i < 3; i++)
-			val[i] = at->guardVector[i] | (at->gVFlags[i] << 8);
-
-		file.write(PTR(val), sizeof(val));
+	if(at->correction2 != 100){ //This might be wrong.
+		file.write("ATHH", 4);
+		file.write(VAL(at->correction2), 4);
 	}
 	if(at->otherFlags){
 		file.write("ATF1", 4);
 		file.write(VAL(at->otherFlags), 4);
+	}
+	if (at->damage) {
+		file.write("ATAT", 4);
+		file.write(VAL(at->damage), 4);
+	}
+	if (at->minDamage) {
+		file.write("ATAM", 4);
+		file.write(VAL(at->minDamage), 4);
+	}
+	if (at->meter_gain) {
+		file.write("ATCA", 4);
+		file.write(VAL(at->meter_gain), 4);
+	}
+	if (at->hitStunDecay[0] != 0 ||
+		at->hitStunDecay[1] != 0 ||
+		at->hitStunDecay[2] != 0) {
+		file.write("ATC0", 4);
+		file.write(PTR(at->hitStunDecay), 3*4);
 	}
 	if(at->hitEffect || at->soundEffect){
 		file.write("ATHE", 4);
@@ -260,9 +301,8 @@ void WriteAT(std::ofstream &file, const Frame_AT *at)
 		file.write(VAL(at->addedEffect), 4);
 	}
 	if(at->hitgrab){
-		int val = at->hitgrab;
 		file.write("ATNG", 4);
-		file.write(VAL(val), 4);
+		file.write(VAL(at->hitgrab), 4);
 	}
 	if(at->extraGravity){
 		file.write("ATUH", 4);
@@ -283,6 +323,14 @@ void WriteAT(std::ofstream &file, const Frame_AT *at)
 	if(at->hitStop){
 		file.write("ATSP", 4);
 		file.write(VAL(at->hitStop), 4);
+	}
+	if(at->addHitStun){
+		file.write("ATSA", 4);
+		file.write(VAL(at->addHitStun), 4);
+	}
+	if(at->hitStun){
+		file.write("ATSH", 4);
+		file.write(VAL(at->hitStun), 4);
 	}
 	if(at->blockStopTime){
 		file.write("ATGN", 4);
@@ -396,13 +444,6 @@ void WriteFrame(std::ofstream &file, const Frame *frame)
 
 void WriteSequence(std::ofstream &file, const Sequence *seq)
 {
-	//Not used by melty blood, probably.
-/* 	if(!seq->codeName.empty()){
-		uint32_t size = seq->codeName.size();
-		file.write("PTCN", 4);
-		file.write(VAL(size), 4);
-		file.write(PTR(seq->codeName.data()), size);
-	} */
 	if(seq->psts){
 		file.write("PSTS", 4);
 		file.write(VAL(seq->psts), 4);
@@ -415,6 +456,10 @@ void WriteSequence(std::ofstream &file, const Sequence *seq)
 		file.write("PFLG", 4);
 		file.write(VAL(seq->flag), 4);
 	}
+	if(seq->pups){
+		file.write("PUPS", 4);
+		file.write(VAL(seq->pups), 4);
+	}
 	if(!seq->name.empty()){
 		char buf[32]{};
 		uint32_t size = 32;
@@ -423,6 +468,12 @@ void WriteSequence(std::ofstream &file, const Sequence *seq)
 		file.write("PTT2", 4);
 		file.write(VAL(size), 4);
 		file.write(PTR(buf), 32);
+	}
+	if(!seq->codeName.empty()){
+		uint32_t size = seq->codeName.size()-1;
+		file.write("PTCN", 4);
+		file.write(VAL(size), 4);
+		file.write(PTR(seq->codeName.data()), size);
 	}
 
 	constexpr Frame_AT defAT{};
@@ -436,7 +487,7 @@ void WriteSequence(std::ofstream &file, const Sequence *seq)
 			data[2] += frame.EF.size();
 			data[3] += frame.IF.size();
 
-			//Do not write if default constructed.
+			//Do not write if default constructed. FIXME: This can cause the game crash if there's a hitbox with no properties.
 			data[4] += (!!memcmp(&frame.AT, &defAT, sizeof(Frame_AT)));
 
 			//Find number of duplicates and write ASSM instead. Not necessary and very low priority.

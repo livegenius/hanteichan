@@ -35,6 +35,7 @@ public:
 		int type;
 		int textureIndex;
 		unsigned char* s3tc = nullptr;
+		bool dontDelete = false;
 	};
 
 	struct PartProperty{

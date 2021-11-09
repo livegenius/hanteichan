@@ -110,7 +110,8 @@ inline void AsDisplay(Frame_AS *as)
 		"High and mid",
 		"Low and mid",
 		"All but throw",
-		"Throw only"
+		"Throw only",
+		"Unknown"
 	};
 
 	constexpr float width = 75.f;
@@ -158,6 +159,8 @@ inline void AsDisplay(Frame_AS *as)
 
 	im::SetNextItemWidth(width);
 	im::InputInt("Number of hits", &as->hitsNumber, 0, 0); im::SameLine(0,20.f);
+	im::SetNextItemWidth(width);
+	im::InputInt("ASCF", &as->ascf, 0, 0);
 	im::Checkbox("Player can move", &as->canMove); //
 	im::Combo("State", &as->stanceState, stateList, IM_ARRAYSIZE(stateList));
 	im::Combo("Invincibility", &as->invincibility, invulList, IM_ARRAYSIZE(invulList));
@@ -281,9 +284,19 @@ inline void AtDisplay(Frame_AT *at)
 		case 21: Tooltip("Unknown 21"); break;
 		case 22: Tooltip("Unknown 22"); break;
 
-		//Unused or don't exist in melty.
-		//case 25: Tooltip("No hitstop on multihit?"); break; 
-		//case 29: Tooltip("Block enemy blast during Stun?"); break;
+		//Not in AACC.
+		case 25: Tooltip("No hitstop on multihit?"); break; 
+		case 29: Tooltip("Block enemy blast during Stun?"); break;
+	}
+
+	flagIndex = -1;
+	BitField("Hitgrab Flags", &at->hitgrab, &flagIndex, 8);
+	switch (flagIndex)
+	{
+		case 0: Tooltip("Enabled"); break;
+		case 1: Tooltip("Target collision"); break;
+		case 2: Tooltip("Target origin"); break;
+		case 3: Tooltip("Ignore player invulnerability timer"); break;
 	}
 
 	im::InputInt("Blockstop", &at->blockStopTime, 0,0);
@@ -293,31 +306,44 @@ inline void AtDisplay(Frame_AT *at)
 	im::SetNextItemWidth(width);
 	im::InputInt("Custom##Hitstop", &at->hitStopTime, 0,0);
 
+	im::SetNextItemWidth(width);
+	im::InputInt("Set Hitstun", &at->hitStun, 0,0);  im::SameLine(0.f, 20); im::SetNextItemWidth(width);
+	im::InputInt("Add hitstun", &at->addHitStun, 0,0);
 
+	im::InputInt3("Hitstun decay", at->hitStunDecay);
+	im::SameLine(); im::TextDisabled("(?)");
+	if(im::IsItemHovered())
+		Tooltip(R"_(1. Hit stun time reduction.
+2. Combopoint set if combo starter
+3. Combopoint SMP modifier (up to
+255, higher is more extreme effect))_");
+		
 	im::SetNextItemWidth(width);
 	im::InputInt("Untech time", &at->untechTime, 0,0);  im::SameLine(0.f, 20); im::SetNextItemWidth(width);
 	im::InputInt("Circuit break time", &at->breakTime, 0,0);
 
-	im::SetNextItemWidth(width);
-	im::InputFloat("Extra gravity", &at->extraGravity, 0,0); im::SameLine(0.f, 20);
-	im::Checkbox("Hitgrab", &at->hitgrab);
-	
 
 	im::SetNextItemWidth(width);
-	im::InputInt("Correction %", &at->correction, 0, 0); im::SameLine(0.f, 20); im::SetNextItemWidth(width*2);
+	im::InputFloat("Extra gravity", &at->extraGravity, 0,0); im::SameLine(0.f, 20); im::SetNextItemWidth(width);
+	im::InputInt("Correction %", &at->correction2, 0, 0);
+
+	im::SetNextItemWidth(width);
+	im::InputInt("Starter correction", &at->correction, 0, 0); im::SameLine(0.f, 20); im::SetNextItemWidth(width*2);
 	im::Combo("Type##Correction", &at->correction_type, "Normal\0Multiplicative\0Substractive\0");
 
 	im::SetNextItemWidth(width);
-	im::InputInt("VS damage", &at->red_damage, 0, 0); im::SameLine(0.f, 20); im::SetNextItemWidth(width);
-	im::InputInt("Damage", &at->damage, 0, 0);
-
+//	im::InputInt("VS damage", &at->red_damage, 0, 0); im::SameLine(0.f, 20); im::SetNextItemWidth(width);
+	im::InputInt("Damage", &at->damage, 0, 0); im::SameLine(0.f, 20); im::SetNextItemWidth(width);
+/* 
 	im::SetNextItemWidth(width);
-	im::InputInt("Guard damage", &at->guard_damage, 0, 0); im::SameLine(0.f, 20); im::SetNextItemWidth(width);
-	im::InputInt("Meter gain", &at->meter_gain, 0, 0);
+	im::InputInt("Guard damage", &at->guard_damage, 0, 0); im::SameLine(0.f, 20); im::SetNextItemWidth(width); */
+	im::InputInt("Meter gain", &at->meter_gain, 0, 0); im::SetNextItemWidth(width*2);
+	im::InputInt("Minimum damage %", &at->minDamage, 0, 0);
 
 	im::Separator();
 	auto comboWidth = (im::GetWindowWidth())/4.f;
 	im::InputInt3("Guard Vector", at->guardVector);
+	//im::InputInt3("GV flags", at->gVFlags);
 	for(int i = 0; i < 3; i++)
 	{	
 		im::SetNextItemWidth(comboWidth);
@@ -330,6 +356,7 @@ inline void AtDisplay(Frame_AT *at)
 
 	im::Separator();
 	im::InputInt3("Hit Vector", at->hitVector);
+	//im::InputInt3("HV flags", at->hVFlags);
 	im::SameLine(); im::TextDisabled("(?)");
 	if(im::IsItemHovered())
 		Tooltip("Stand, air and crouch.\nSee vector text file.");
@@ -351,9 +378,11 @@ inline void AtDisplay(Frame_AT *at)
 	im::InputInt("ID##Hit effect", &at->hitEffect, 0, 0); 
 	
 	im::SetNextItemWidth(70);
-	im::InputInt("Sound effect", &at->soundEffect, 0, 0); im::SameLine(0, 20.f); im::SetNextItemWidth(120);
+	im::InputInt("Sound effect", &at->soundEffect, 0, 0); im::SetNextItemWidth(120);
 
-	im::Combo("Added effect", &at->addedEffect, addedEffectList, IM_ARRAYSIZE(addedEffectList));
+	im::Combo("Added effect", &at->addedEffect, addedEffectList, IM_ARRAYSIZE(addedEffectList)); im::SameLine(0, 20.f);
+	im::SetNextItemWidth(70);
+	im::InputInt("ID##Added effect", &at->addedEffect, 0, 0);
 
 
 
@@ -373,7 +402,8 @@ inline void AfDisplay(Frame_AF *af, int &selectedLayer)
 	const char* const animationList[] = {
 		"Go to pattern",
 		"Next frame",
-		"Go to frame"
+		"Go to frame",
+		"End"
 	};
 
 	constexpr float width = 50.f;
@@ -410,19 +440,24 @@ inline void AfDisplay(Frame_AF *af, int &selectedLayer)
 
 	im::DragFloat3("Rot XYZ", layer->rotation, 0.005); 
 	im::DragFloat2("Scale", layer->scale, 0.1);
+	im::InputInt("Layer priority", &layer->priority);
 	im::Separator();
 
 	im::Checkbox("Rotation keeps scale set by EF", &af->AFRT);
 	im::Checkbox("AFJH", &af->afjh);
+	im::InputScalarN("AF Params", ImGuiDataType_U8, af->param, 4, NULL, NULL, "%hhu", 0);
+	im::SetNextItemWidth(width);
+	im::InputInt("Frame id", &af->frameId, 0, 0);
 
 	unsigned int flagIndex = -1;
-	BitField("Animation flags", &af->aniFlag, &flagIndex, 4);
+	BitField("Animation flags", &af->aniFlag, &flagIndex, 8);
 	switch (flagIndex)
 	{
 		case 0: Tooltip("Land to pattern?"); break;
 		case 1: Tooltip("Check loop counter"); break;
 		case 2: Tooltip("Go to relative offset"); break;
 		case 3: Tooltip("Relative end of loop"); break;
+		case 7: Tooltip("Unknown"); break;
 	}
 
 	im::Combo("Animation", &af->aniType, animationList, IM_ARRAYSIZE(animationList));

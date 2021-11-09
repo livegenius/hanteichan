@@ -34,19 +34,8 @@ struct Frame_AF {
 	*/
 	int aniType; 
 
-	// Bit flags. First 4 bits only
 	unsigned int aniFlag;
 
-
-	
-
-	
-
-	
-	//Depends on aniflag.
-	//If (0)end, it jumps to the number of the sequence
-	//If (2)jump, it jumps to the number of the frame of the seq.
-	//It seems to do nothing if the aniflag is 1(next).
 	int jump;
 	
 	int landJump; //Jumps to this frame if landing.
@@ -108,8 +97,8 @@ struct Frame_AT {
 	int correction_type; 
 
 	int damage;
-	int red_damage;
-	int guard_damage;
+	//int red_damage;
+	//int guard_damage;
 	int meter_gain;
 
 	//Stand, Air, Crouch
@@ -123,7 +112,7 @@ struct Frame_AT {
 
 	int addedEffect; //Lasting visual effect after being hit
 
-	bool hitgrab;
+	unsigned int hitgrab; //bitfield in uni
 
 	//Affects untech time and launch vector, can be negative.
 	float extraGravity;
@@ -140,7 +129,6 @@ struct Frame_AT {
 	int hitStunDecay[3];
 	int correction2; //during combo?
 	int minDamage;
-	
 };
 
 struct Frame_EF {
@@ -155,9 +143,9 @@ struct Frame_IF {
 };
 
 struct Frame {
-	Frame_AF AF;
-	Frame_AS AS;
-	Frame_AT AT;
+	Frame_AF AF = {};
+	Frame_AS AS = {};
+	Frame_AT AT = {};
 
 	std::vector<Frame_EF> EF;
 	std::vector<Frame_IF> IF;
@@ -170,12 +158,15 @@ struct Sequence {
 	std::string	name;
 	std::string codeName;
 	
-	int psts;
-	int level;
-	int flag;
+	int psts = 0;
+	int level = 0;
+	int flag = 0;
 
-	bool empty;
-	bool initialized;
+	//new
+	int pups = 0;
+
+	bool empty = true;
+	bool initialized = false;
 
 	std::vector<Frame> frames;
 
@@ -189,14 +180,11 @@ private:
 	
 public:
 
-	bool		m_loaded;
+	bool m_loaded;
 	std::vector<Sequence> m_sequences;
 	void initEmpty();
 	bool load(const char *filename, bool patch = false);
 	void save(const char *filename);
-
-	//Probably unnecessary.
-	//bool load_move_list(Pack *pack, const char *filename);
 
 	int get_sequence_count();
 

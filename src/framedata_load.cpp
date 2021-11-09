@@ -15,6 +15,7 @@ void TestInfo::Print(const void *data, const void *data_end)
 unsigned int *fd_frame_AT_load(unsigned int *data, const unsigned int *data_end, Frame_AT *AT)
 {
 	AT->correction = 100;
+	AT->correction2 = 100;
 	
 	while (data < data_end) {
 		unsigned int *buf = data;
@@ -35,10 +36,11 @@ unsigned int *fd_frame_AT_load(unsigned int *data, const unsigned int *data_end,
 			data+=2;
 			for(int i = 0; i < 3*4; i+=4)
 			{
-				AT->hitVector[i/4] = data[i];
-				AT->hVFlags[i/4] = data[i+1];
-				AT->guardVector[i/4] = data[i+2];
-				AT->hVFlags[i/4] = data[i+3];
+				AT->hVFlags[i/4] = data[i];
+				AT->hitVector[i/4] = data[i+1];
+				AT->gVFlags[i/4] = data[i+2];
+				AT->guardVector[i/4] = data[i+3];
+				assert(AT->hVFlags[i/4] <= 3 && AT->gVFlags[i/4] <= 3);
 			}
 			data += 12;
 		} else if (!memcmp(buf, "ATHS", 4)) {
@@ -47,10 +49,10 @@ unsigned int *fd_frame_AT_load(unsigned int *data, const unsigned int *data_end,
 		} else if (!memcmp(buf, "ATVV", 4)) {
 			assert(0); //deprecated?
 			short *d = (short *)data;
-			AT->red_damage = d[0];
+/* 			AT->red_damage = d[0];
 			AT->damage = d[1];
 			AT->guard_damage = d[2];
-			AT->meter_gain = d[3];
+			AT->meter_gain = d[3]; */
 			data += 2;
 		} else if (!memcmp(buf, "ATHT", 4)) {
 			AT->correction_type = data[0];
@@ -112,6 +114,7 @@ unsigned int *fd_frame_AT_load(unsigned int *data, const unsigned int *data_end,
 		} else if (!memcmp(buf, "ATNG", 4)) {
 			//Melty only uses 1. UNI uses higher values.
 			AT->hitgrab = data[0];
+			assert(data[0] < 0x100);
 			data++;
 		} else if (!memcmp(buf, "ATUH", 4)) {
 			AT->extraGravity = ((float*)data)[0];
@@ -236,7 +239,7 @@ unsigned int *fd_frame_AS_load(unsigned int *data, const unsigned int *data_end,
 			data++;
 		} else if (!memcmp(buf, "ASYS", 4)) {
 			AS->invincibility = data[0];
-			if(data[0] > 4)
+			if(data[0] > 5)
 			{
 				test.Print(data, data_end);
 				std::cout <<"\tUnknown ASYS value: " << data[0] <<"\n";
@@ -456,7 +459,7 @@ unsigned int *fd_frame_AF_load(unsigned int *data, const unsigned int *data_end,
 				++data;
 			} else if (t == 'E') {
 				frame->AF.aniFlag = data[0];
-				assert(data[0] < 0x10); //Only lower four?
+				assert(data[0] < 0x100); //Only lower eight?
 				++data;
 			}
 			else {
@@ -642,7 +645,7 @@ unsigned int *fd_sequence_load(unsigned int *data, const unsigned int *data_end,
 	temp_info.cur_AS = 0;
 	
 	std::string name, codename;
-	int level = 0, psts = 0, flag = 0;
+	int level = 0, psts = 0, flag = 0, pups = 0;
 	
 	while (data < data_end) {
 		unsigned int *buf = data;
@@ -670,6 +673,7 @@ unsigned int *fd_sequence_load(unsigned int *data, const unsigned int *data_end,
 			//4 必殺投げ Only kouma's 110
 			//5 他 Projectiles, but not effects.
 			//6 超必殺技 Only NAC's 96 and hime's 298 
+			assert(0 && "PSTS");
 			psts = *data;
 			++data;
 		} else if (!memcmp(buf, "PLVL", 4)) {
@@ -680,6 +684,10 @@ unsigned int *fd_sequence_load(unsigned int *data, const unsigned int *data_end,
 		} else if (!memcmp(buf, "PFLG", 4)) {
 			//Unknown. Always 1?
 			flag = *data;
+			
+			++data;
+		} else if (!memcmp(buf, "PUPS", 4)) {
+			pups = *data;
 			
 			++data;
 		} else if (!memcmp(buf, "PDST", 4)) {
@@ -727,11 +735,11 @@ unsigned int *fd_sequence_load(unsigned int *data, const unsigned int *data_end,
 			// data[8] = frame count
 			if (data[0] == 32) {
 				seq->frames.clear();
-				seq->frames.resize(data[1]);
+				seq->frames.resize(data[1], {});
 
 				//Only AS and boxes have references.
-				temp_info.boxesRefs.resize(data[2]);
-				temp_info.AS.resize(data[7]);
+				temp_info.boxesRefs.resize(data[2], {});
+				temp_info.AS.resize(data[7], {});
 
 				nframes = data[1];
 
@@ -744,6 +752,7 @@ unsigned int *fd_sequence_load(unsigned int *data, const unsigned int *data_end,
 				seq->psts = psts;
 				seq->level = level;
 				seq->flag = flag;
+				seq->pups = pups;
 			
 			}
 			else

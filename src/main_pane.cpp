@@ -88,7 +88,7 @@ void MainPane::Draw()
 				if(im::Button("Add frame"))
 				{
 					seq->frames.push_back({});
-					seq->frames.back().AF.layers.push_back({});
+					seq->frames.back().AF.layers.resize(3);
 					currState.frame = 0;
 				}
 				
