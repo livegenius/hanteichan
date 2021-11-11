@@ -574,6 +574,8 @@ unsigned int *fd_frame_load(unsigned int *data, const unsigned int *data_end, Fr
 
 				data = fd_frame_AS_load(data, data_end, &frame->AS);
 			}
+			else
+				assert(0);
 		} else if (!memcmp(buf, "ASSM", 4)) {
 			// reference state block
 			unsigned int value = data[0];
@@ -636,7 +638,6 @@ unsigned int *fd_frame_load(unsigned int *data, const unsigned int *data_end, Fr
 
 unsigned int *fd_sequence_load(unsigned int *data, const unsigned int *data_end, Sequence *seq, bool utf8)
 {
-
 	TempInfo temp_info;
 	unsigned int frame_it = 0, nframes = 0;
 	

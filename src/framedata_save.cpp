@@ -56,19 +56,19 @@ void WriteAF(std::ofstream &file, const Frame_AF *af)
 			file.write("AFRG", 4);
 			file.write(PTR(anormalized), 3*sizeof(float));
 		}
-
-		if(l.rotation[0]){
-			file.write("AFAX", 4);
-			file.write(VAL(l.rotation[0]), sizeof(float));
+		if(l.rotation[2]){
+			file.write("AFAZ", 4);
+			file.write(VAL(l.rotation[2]), sizeof(float));
 		}
 		if(l.rotation[1]){
 			file.write("AFAY", 4);
 			file.write(VAL(l.rotation[1]), sizeof(float));
 		}
-		if(l.rotation[2]){
-			file.write("AFAZ", 4);
-			file.write(VAL(l.rotation[2]), sizeof(float));
+		if(l.rotation[0]){
+			file.write("AFAX", 4);
+			file.write(VAL(l.rotation[0]), sizeof(float));
 		}
+		
 		if(	l.scale[0] != 1.f ||
 			l.scale[1] != 1.f){
 			file.write("AFZM", 4);
@@ -103,22 +103,22 @@ void WriteAF(std::ofstream &file, const Frame_AF *af)
 		file.write("AFFE", 4);
 		file.write(VAL(af->aniFlag), 4);
 	}
-	if(af->afjh){
-		file.write("AFJH", 4);
-		int AFJH = af->afjh;
-		file.write(VAL(AFJH), 4);
+	if(af->interpolationType){
+		file.write("AFHK", 4);
+		file.write(VAL(af->interpolationType), 4);
 	}
 	if(af->jump){
 		file.write("AFJP", 4);
 		file.write(VAL(af->jump), 4);
 	}
-	if(af->interpolationType){
-		file.write("AFHK", 4);
-		file.write(VAL(af->interpolationType), 4);
-	}
 	if(af->frameId){
 		file.write("AFID", 4);
 		file.write(VAL(af->frameId), 4);
+	}
+	if(af->afjh){
+		file.write("AFJH", 4);
+		int AFJH = af->afjh;
+		file.write(VAL(AFJH), 4);
 	}
 	if(memcmp(af->param, "\0\0\0\0", 4))
 	{
@@ -185,6 +185,10 @@ void WriteAS(std::ofstream &file, const Frame_AS *as)
 		file.write("ASS", 3); //lmaop
 		file.write(VAL(t), 1);
 	}
+	if(as->hitsNumber){
+		file.write("ASAA", 4);
+		file.write(VAL(as->hitsNumber), 4);
+	}
 	if(as->cancelNormal){
 		file.write("ASCN", 4);
 		file.write(VAL(as->cancelNormal), 4);
@@ -223,10 +227,7 @@ void WriteAS(std::ofstream &file, const Frame_AS *as)
 		file.write(PTR(as->sineParameters), 4*4);
 		file.write(PTR(as->sinePhases), 2*sizeof(float));
 	}
-	if(as->hitsNumber){
-		file.write("ASAA", 4);
-		file.write(VAL(as->hitsNumber), 4);
-	}
+	
 	if(as->invincibility){
 		file.write("ASYS", 4);
 		file.write(VAL(as->invincibility), 4);
@@ -256,6 +257,23 @@ void WriteAT(std::ofstream &file, const Frame_AT *at)
 			file.write(VAL(at->gVFlags[i]), 4);
 			file.write(VAL(at->guardVector[i]), 4);
 		}
+	}
+	if(at->hitEffect || at->soundEffect){
+		file.write("ATHE", 4);
+		file.write(VAL(at->hitEffect), 4);
+		file.write(VAL(at->soundEffect), 4);
+	}
+	if(at->hitgrab){
+		file.write("ATNG", 4);
+		file.write(VAL(at->hitgrab), 4);
+	}
+	if(at->hitStop){
+		file.write("ATSP", 4);
+		file.write(VAL(at->hitStop), 4);
+	}
+	if(at->untechTime){
+		file.write("ATSU", 4);
+		file.write(VAL(at->untechTime), 4);
 	}
 	if(at->correction != 100){
 		file.write("ATHS", 4);
@@ -291,19 +309,11 @@ void WriteAT(std::ofstream &file, const Frame_AT *at)
 		file.write("ATC0", 4);
 		file.write(PTR(at->hitStunDecay), 3*4);
 	}
-	if(at->hitEffect || at->soundEffect){
-		file.write("ATHE", 4);
-		file.write(VAL(at->hitEffect), 4);
-		file.write(VAL(at->soundEffect), 4);
-	}
 	if(at->addedEffect){
 		file.write("ATKK", 4);
 		file.write(VAL(at->addedEffect), 4);
 	}
-	if(at->hitgrab){
-		file.write("ATNG", 4);
-		file.write(VAL(at->hitgrab), 4);
-	}
+	
 	if(at->extraGravity){
 		file.write("ATUH", 4);
 		file.write(VAL(at->extraGravity), 4);
@@ -316,14 +326,7 @@ void WriteAT(std::ofstream &file, const Frame_AT *at)
 		file.write("ATSN", 4);
 		file.write(VAL(at->hitStopTime), 4);
 	}
-	if(at->untechTime){
-		file.write("ATSU", 4);
-		file.write(VAL(at->untechTime), 4);
-	}
-	if(at->hitStop){
-		file.write("ATSP", 4);
-		file.write(VAL(at->hitStop), 4);
-	}
+	
 	if(at->addHitStun){
 		file.write("ATSA", 4);
 		file.write(VAL(at->addHitStun), 4);
@@ -341,43 +344,91 @@ void WriteAT(std::ofstream &file, const Frame_AT *at)
 
 void WriteEF(std::ofstream &file, const std::vector<Frame_EF> &ef)
 {
-	constexpr int paramN = 12;
+	constexpr size_t maxParam = 12;
 	for(int i = 0; i < ef.size(); i++)
 	{
+		int paramN = 0;
+		for(int j = 0; j < maxParam; j++)
+		{
+			if(ef[i].parameters[j])
+				paramN = j+1;
+		}
 		file.write("EFST", 4);
 		file.write(VAL(i), 4);
 		file.write("EFTP", 4);
 		file.write(VAL(ef[i].type), 4);
 		file.write("EFNO", 4);
 		file.write(VAL(ef[i].number), 4);
-		file.write("EFPR", 4);
-		file.write(VAL(paramN), 4);
-		file.write(PTR(ef[i].parameters), 12*4);
+		if(paramN)
+		{
+			file.write("EFPR", 4);
+			file.write(VAL(paramN), 4);
+			file.write(PTR(ef[i].parameters), paramN*4);
+		}
 		file.write("EFED", 4);
 	}
 }
 
-void WriteIF(std::ofstream &file, const std::vector<Frame_IF> &ef)
+void WriteIF(std::ofstream &file, const std::vector<Frame_IF> &ifs)
 {
-	constexpr int paramN = 9;
-	for(int i = 0; i < ef.size(); i++)
+	constexpr size_t maxParam = 9;
+	for(int i = 0; i < ifs.size(); i++)
 	{
+		int paramN = 0;
+		for(int j = 0; j < maxParam; j++)
+		{
+			if(ifs[i].parameters[j])
+				paramN = j+1;
+		}
 		file.write("IFST", 4);
 		file.write(VAL(i), 4);
 		file.write("IFTP", 4);
-		file.write(VAL(ef[i].type), 4);
-		file.write("IFPR", 4);
-		file.write(VAL(paramN), 4);
-		file.write(PTR(ef[i].parameters), 9*4);
+		file.write(VAL(ifs[i].type), 4);
+		if(paramN)
+		{
+			file.write("IFPR", 4);
+			file.write(VAL(paramN), 4);
+			file.write(PTR(ifs[i].parameters), paramN*4);
+		}
 		file.write("IFED", 4);
 	}
 }
 
-void WriteFrame(std::ofstream &file, const Frame *frame)
+struct PatInfo
+{
+	std::vector<const int*> boxList;
+	std::vector<const Frame_AS*> asList;
+
+	//out info
+	int totalBoxes = 0;
+	int totalAsses = 0;
+};
+
+void WriteFrame(std::ofstream &file, const Frame *frame, PatInfo &patInfo)
 {
 	file.write("FSTR", 4);
 	WriteAF(file, &frame->AF);
-	WriteAS(file, &frame->AS);
+
+	int dupeAsIndex = -1;
+	for(int i = 0; i < patInfo.asList.size(); ++i)
+	{
+		if(!memcmp(&frame->AS, patInfo.asList[i], sizeof(Frame_AS)))
+		{
+			dupeAsIndex = i;
+			break;
+		}
+	}
+	if(dupeAsIndex >= 0)
+	{
+		file.write("ASSM", 4);
+		file.write(VAL(dupeAsIndex), 4);
+	}
+	else
+	{
+		WriteAS(file, &frame->AS);
+		patInfo.asList.push_back(&frame->AS);
+		patInfo.totalAsses += 1;
+	}
 
 
 	bool hasAt = false;
@@ -424,16 +475,51 @@ void WriteFrame(std::ofstream &file, const Frame *frame)
 	for(const auto& box : frame->hitboxes)
 	{
 		int index = box.first;
+		
+		int dupeIndex = -1;
+		for(int i = patInfo.boxList.size()-1; i >= 0; --i)
+		{
+			if(!memcmp(box.second.xy, patInfo.boxList[i], sizeof(int)*4))
+			{
+				dupeIndex = i;
+				break;
+			}
+		}
+		
 		if(box.first >= 25)
 		{
 			index -= 25;
-			file.write("HRAT", 4);
+			if(dupeIndex >= 0)
+				file.write("HRAS", 4);
+			else
+			{
+				file.write("HRAT", 4);
+				//patInfo.attackList.push_back(box.second.xy);
+			}
 		}
 		else
-			file.write("HRNM", 4);
+		{
+			if(dupeIndex >= 0)
+				file.write("HRNS", 4);
+			else
+			{
+				file.write("HRNM", 4);
+				//patInfo.hurtList.push_back(box.second.xy);
+			}
+		}
 
-		file.write(VAL(index), 4);
-		file.write(PTR(box.second.xy), 4*4);
+		if(dupeIndex >= 0)
+		{
+			file.write(VAL(index), 4);
+			file.write(VAL(dupeIndex), 4);
+		}
+		else
+		{
+			file.write(VAL(index), 4);
+			file.write(PTR(box.second.xy), 4*4);
+			patInfo.boxList.push_back(box.second.xy);
+			patInfo.totalBoxes += 1;
+		}
 	}
 	
 	WriteEF(file, frame->EF);
@@ -470,7 +556,7 @@ void WriteSequence(std::ofstream &file, const Sequence *seq)
 		file.write(PTR(buf), 32);
 	}
 	if(!seq->codeName.empty()){
-		uint32_t size = seq->codeName.size()-1;
+		uint32_t size = seq->codeName.size()+1;
 		file.write("PTCN", 4);
 		file.write(VAL(size), 4);
 		file.write(PTR(seq->codeName.data()), size);
@@ -479,30 +565,39 @@ void WriteSequence(std::ofstream &file, const Sequence *seq)
 	constexpr Frame_AT defAT{};
 	if(!seq->frames.empty())
 	{
-		uint32_t data[8]{};
-		data[0] = data[7] = seq->frames.size();
+		uint32_t pds2[8]{};
+		pds2[0] = pds2[7] = seq->frames.size();
 		for(const auto& frame : seq->frames)
 		{
-			data[1] += frame.hitboxes.size();
-			data[2] += frame.EF.size();
-			data[3] += frame.IF.size();
+			//data[1] += frame.hitboxes.size();
+			pds2[2] += frame.EF.size();
+			pds2[3] += frame.IF.size();
 
 			//Do not write if default constructed. FIXME: This can cause the game crash if there's a hitbox with no properties.
-			data[4] += (!!memcmp(&frame.AT, &defAT, sizeof(Frame_AT)));
+			pds2[4] += (!!memcmp(&frame.AT, &defAT, sizeof(Frame_AT)));
 
 			//Find number of duplicates and write ASSM instead. Not necessary and very low priority.
-			data[6]	+= 1;
+			//pds2[6]	+= 1;
 		}
 
-		uint32_t size = sizeof(data);
+		uint32_t pds2Size = sizeof(pds2);
 
 		file.write("PDS2", 4);
-		file.write(VAL(size), 4);
-		file.write(PTR(data), size);
+		file.write(VAL(pds2Size), 4);
+		auto dataBlockPos = file.tellp();
+		file.write(PTR(pds2), pds2Size);
 
+		PatInfo info{};
 		for(const auto& frame : seq->frames)
 		{
-			WriteFrame(file, &frame);
+			WriteFrame(file, &frame, info);
 		}
+		pds2[1] = info.totalBoxes;
+		pds2[6] = info.totalAsses;
+
+		auto curPos = file.tellp();
+		file.seekp(dataBlockPos);
+		file.write(PTR(pds2), pds2Size);
+		file.seekp(curPos);
 	}
 }
