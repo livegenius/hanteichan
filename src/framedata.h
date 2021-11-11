@@ -11,7 +11,7 @@ extern std::set<int> numberSet;
 extern int maxCount;
 
 struct Layer{
-	int spriteId;
+	int spriteId = -1;
 	bool usePat;
 	int offset_y;
 	int offset_x;

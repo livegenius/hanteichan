@@ -151,7 +151,10 @@ void MainPane::Draw()
 						if(copyThisFrame)
 							seq->frames.push_back(frame);
 						else
+						{
 							seq->frames.push_back({});
+							seq->frames.back().AF.layers.resize(3);
+						}
 					}
 
 					im::SameLine(0,20.f); 
@@ -160,7 +163,10 @@ void MainPane::Draw()
 						if(copyThisFrame)
 							seq->frames.insert(seq->frames.begin()+currState.frame, frame);
 						else
-							seq->frames.insert(seq->frames.begin()+currState.frame, {});
+						{
+							seq->frames.insert(seq->frames.begin()+currState.frame, 1, {});
+							seq->frames[currState.frame].AF.layers.resize(3);
+						}
 					}
 
 					im::SameLine(0,20.f);

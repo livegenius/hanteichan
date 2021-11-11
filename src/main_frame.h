@@ -34,7 +34,7 @@ private:
 	ContextGl *context;
 	float clearColor[3];
 	int style_idx = 0;
-	int zoom_idx = 3;
+	int zoom_idx = 1;
 	bool smoothRender = false; 
 	
 
