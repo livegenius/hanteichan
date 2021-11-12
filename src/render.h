@@ -15,7 +15,7 @@
 class Render
 {
 private:
-	glm::mat4 projection, perspective;
+	glm::mat4 projection, perspective, invOrtho;
 	glm::mat4 globalView = glm::mat4(1.f);
 	
 	CG *cg;
@@ -42,8 +42,10 @@ private:
 
 	void AdjustImageQuad(int x, int y, int w, int h);
 	void SetMatrix(int location, glm::mat4 view);
-	void SetMatrixPersp(int location, glm::mat4 view);
+	void SetMatrixPersp(int location, glm::mat4 view, glm::mat4 pre);
 	void SetBlendingMode();
+
+	float wd = 1.f, hd = 1.f;
 	
 	float iScale;
 

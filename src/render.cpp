@@ -188,10 +188,11 @@ void Render::Draw()
 		if(!texture.isApplied && layer.usePat == 0)
 			continue;
 
-		glm::mat4 view = glm::scale(globalView, glm::vec3(layer.scale[0], layer.scale[1], 1.f));
+		glm::mat4 view = glm::scale(glm::mat4(1.f), glm::vec3(layer.scale[0], layer.scale[1], 1.f));
 		view = glm::rotate(view, layer.rotation[2]*tau, glm::vec3(0.0, 0.f, 1.f));
 		view = glm::rotate(view, layer.rotation[1]*tau, glm::vec3(0.0, 1.f, 0.f));
 		view = glm::rotate(view, layer.rotation[0]*tau, glm::vec3(1.0, 0.f, 0.f));
+		
 
 		sTextured.Use();
 		if(texture.isApplied)
@@ -199,7 +200,7 @@ void Render::Draw()
 			view = glm::translate(view, glm::vec3(-128+layer.offset_x, -224+layer.offset_y, 0.f));
 			glUniform3f(lAddColorT, 0.f,0.f,0.f);
 			//if(i==)
-			SetMatrix(lProjectionT, view);
+			SetMatrix(lProjectionT, globalView * view);
 			//SetMatrixPersp(lProjectionT, view);
 			glBindTexture(GL_TEXTURE_2D, texture.id);
 			switch (layer.blend_mode)
@@ -226,9 +227,16 @@ void Render::Draw()
 		else
 		{
 			view = glm::translate(view, glm::vec3(layer.offset_x, layer.offset_y, 0.f));
+			auto rview = projection;
+			rview = glm::scale(rview, glm::vec3(scale, scale, 1.f));
+			rview = glm::translate(rview, glm::vec3(x, y, 0));
+			rview *= view;
+			rview = glm::translate(rview, glm::vec3(0, 0, 1024.f));
+			rview *= invOrtho;
+
 			glDisableVertexAttribArray(2);
-			parts->Draw(layer.spriteId, view, [this](glm::mat4 m){
-					SetMatrixPersp(lProjectionT, m);
+			parts->Draw(layer.spriteId, [this, &rview](glm::mat4 m){
+					SetMatrixPersp(lProjectionT, m, rview);
 				},
 				[this](float r, float g, float b){
 					glUniform3f(lAddColorT,r,g,b);
@@ -264,27 +272,31 @@ void Render::SetMatrix(int lProjection, glm::mat4 view)
 	glUniformMatrix4fv(lProjection, 1, GL_FALSE, glm::value_ptr(projection*view));
 }
 
-void Render::SetMatrixPersp(int lProjection, glm::mat4 view)
+void Render::SetMatrixPersp(int lProjection, glm::mat4 view, glm::mat4 pre)
 {
-	glUniformMatrix4fv(lProjection, 1, GL_FALSE, glm::value_ptr(perspective*view));
+	glUniformMatrix4fv(lProjection, 1, GL_FALSE, glm::value_ptr(pre*perspective*view));
 }
 
 void Render::UpdateProj(float w, float h)
 {
 	if(w == 0 || h == 0)
 		return;
+	wd = w;
+	hd = h;
 	
 	projection = glm::ortho<float>(0, w, h, 0, -1024.f, 1024.f);
+	invOrtho = glm::inverse(projection);
 
 	//perspective = glm::perspective<float>(90, w / h, 1, 2048);
 	constexpr float pi = glm::pi<float>();
 
 	constexpr float dist = 1024;
 	constexpr float dist2 = dist*2; 
-	constexpr float f = 1;
-	perspective = glm::frustum<float>(-w/dist2, w/dist2, h/dist2, -h/dist2, 1*f, dist*2*f);
+	constexpr float f = 1.3;
+	perspective = glm::translate(glm::mat4(1.f), glm::vec3(-1, 1, 0)) *
+		glm::frustum<float>(-w/dist2, w/dist2, h/dist2, -h/dist2, 1*f, dist*2*f);
 	//perspective = glm::perspective<float>(90, w / h, 1, 2048);
-	perspective = glm::translate(perspective, glm::vec3(-w/2,-h/2,-dist*f));
+	perspective = glm::translate(perspective, glm::vec3(0.f, 0.f, -dist*f));
 }
 
 void Render::SwitchImage(std::vector<Layer> *layers_)

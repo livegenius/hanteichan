@@ -493,7 +493,7 @@ bool Parts::Load(const char *name)
 	return true;
 }
 
-void Parts::Draw(int pattern, const glm::mat4 &projection,
+void Parts::Draw(int pattern,
 	std::function<void(glm::mat4)> setMatrix,
 	std::function<void(float,float,float)> setAddColor, float color[4])
 {
@@ -509,32 +509,22 @@ void Parts::Draw(int pattern, const glm::mat4 &projection,
 			constexpr float tau = glm::pi<float>()*2.f;
 			glm::mat4 view = glm::mat4(1.f);
 			
-			//FIXME: Transformations are broken.
+			view = glm::translate(view, glm::vec3(part.x,part.y,0.f));
+			view = glm::rotate(view, -part.rotation[1]*tau, glm::vec3(0.0, 1.f, 0.f));
+			view = glm::rotate(view, -part.rotation[0]*tau, glm::vec3(1.0, 0.f, 0.f));
+			view = glm::rotate(view, part.rotation[2]*tau, glm::vec3(0.0, 0.f, 1.f));
+
 			if(part.reverse)
 			{
 				auto cutout = cutOuts[part.ppId];
 				//view = glm::translate(view, glm::vec3(-xy[0],part.y,0.f));
-				
-				view = glm::translate(view, glm::vec3(part.x,part.y,0.f));
- 				view = glm::rotate(view, part.rotation[2]*tau, glm::vec3(0.0, 0.f, 1.f));
-				view = glm::rotate(view, part.rotation[1]*tau, glm::vec3(0.0, 1.f, 0.f));
-				view = glm::rotate(view, part.rotation[0]*tau, glm::vec3(1.0, 0.f, 0.f));
-
 				view = glm::scale(view, glm::vec3(-1.f, 1.f, 1.f));
 				view = glm::translate(view, glm::vec3(-cutout.wh[0]+cutout.xy[0]*2,0.f,0.f));
-			}
-			else{
-				view = glm::translate(view, glm::vec3(part.x,part.y,0.f));
-				
-				view = glm::rotate(view, part.rotation[2]*tau, glm::vec3(0.0, 0.f, 1.f));
-				view = glm::rotate(view, part.rotation[1]*tau, glm::vec3(0.0, 1.f, 0.f));
-				view = glm::rotate(view, part.rotation[0]*tau, glm::vec3(1.0, 0.f, 0.f));
-				
 			}
 			
 			view = glm::scale(view, glm::vec3(part.scaleX, part.scaleY, 1.f));
 			
-			setMatrix(projection*view);
+			setMatrix(view);
 			if(screenShot)
 				glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
 			else if(part.additive)

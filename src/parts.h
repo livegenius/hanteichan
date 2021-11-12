@@ -77,7 +77,7 @@ public:
 	bool Load(const char *name);
 
 	PartGfx *GetTexture(unsigned int n);
-	void Draw(int pattern, const glm::mat4 &projection, std::function<void(glm::mat4)> setMatrix,
+	void Draw(int pattern, std::function<void(glm::mat4)> setMatrix,
 		std::function<void(float,float,float)> setAddColor, float color[4]);
 	
 };
