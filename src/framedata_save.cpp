@@ -401,7 +401,8 @@ struct PatInfo
 
 	//out info
 	int totalBoxes = 0;
-	int totalAsses = 0;
+	int totalAses = 0;
+	int totalAts = 0;
 };
 
 void WriteFrame(std::ofstream &file, const Frame *frame, PatInfo &patInfo)
@@ -427,7 +428,7 @@ void WriteFrame(std::ofstream &file, const Frame *frame, PatInfo &patInfo)
 	{
 		WriteAS(file, &frame->AS);
 		patInfo.asList.push_back(&frame->AS);
-		patInfo.totalAsses += 1;
+		patInfo.totalAses += 1;
 	}
 
 
@@ -470,7 +471,10 @@ void WriteFrame(std::ofstream &file, const Frame *frame, PatInfo &patInfo)
 
 	constexpr Frame_AT defAT{};
 	if(!!memcmp(&frame->AT, &defAT, sizeof(Frame_AT)) || hasAt)
+	{
 		WriteAT(file, &frame->AT);
+		patInfo.totalAts += 1;
+	}
 
 	for(const auto& box : frame->hitboxes)
 	{
@@ -569,15 +573,8 @@ void WriteSequence(std::ofstream &file, const Sequence *seq)
 		pds2[0] = pds2[7] = seq->frames.size();
 		for(const auto& frame : seq->frames)
 		{
-			//data[1] += frame.hitboxes.size();
 			pds2[2] += frame.EF.size();
 			pds2[3] += frame.IF.size();
-
-			//Do not write if default constructed. FIXME: This can cause the game crash if there's a hitbox with no properties.
-			pds2[4] += (!!memcmp(&frame.AT, &defAT, sizeof(Frame_AT)));
-
-			//Find number of duplicates and write ASSM instead. Not necessary and very low priority.
-			//pds2[6]	+= 1;
 		}
 
 		uint32_t pds2Size = sizeof(pds2);
@@ -593,7 +590,8 @@ void WriteSequence(std::ofstream &file, const Sequence *seq)
 			WriteFrame(file, &frame, info);
 		}
 		pds2[1] = info.totalBoxes;
-		pds2[6] = info.totalAsses;
+		pds2[6] = info.totalAses;
+		pds2[4] = info.totalAts;
 
 		auto curPos = file.tellp();
 		file.seekp(dataBlockPos);
