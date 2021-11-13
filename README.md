@@ -1,6 +1,7 @@
 # Hantei-chan #
-Hantei-chan is a HA6/Hantei6 GUI editor for French bread games. MBAACC support has been dropped.
-The last release to support it was 1.1.1. This program only for windows. 
+Hantei-chan, a word play on hantei-kun (French Bread's own internal tool), is a .HA6 visual editor for French Bread games.
+MBAACC support was dropped in version 2.
+The last release to support it is 1.1.1. This program only for windows. 
 
 ![screenshot](https://user-images.githubusercontent.com/39018575/119175726-311f4580-ba38-11eb-83dd-2d7d57c17f02.png)
 
