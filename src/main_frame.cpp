@@ -578,6 +578,20 @@ void MainFrame::Menu(unsigned int errorPopupId)
 			}
 			ImGui::EndMenu();
 		}
+		if (ImGui::BeginMenu("Tools"))
+		{
+			if (ImGui::MenuItem("Fill missing layers")){
+				for(auto &seq : framedata.m_sequences)
+				{
+					for(auto &frame : seq.frames)
+					{
+						if(frame.AF.layers.size() < 3)
+							frame.AF.layers.resize(3);
+					}
+				}
+			}
+			ImGui::EndMenu();
+		}
 		if (ImGui::BeginMenu("Help"))
 		{
 			if (ImGui::MenuItem("About")) aboutWindow.isVisible = !aboutWindow.isVisible;

@@ -301,14 +301,15 @@ inline void AtDisplay(Frame_AT *at)
 
 	im::InputInt("Blockstop", &at->blockStopTime, 0,0);
 
-	im::SetNextItemWidth(width*2);
-	im::Combo("Hitstop", &at->hitStop, hitStopList, IM_ARRAYSIZE(hitStopList)); im::SameLine(0.f, 20);
+	im::SetNextItemWidth(width);
+	im::InputInt("Preset hitstop", &at->hitStop, 0,0); im::SameLine();
+	//im::Combo("Hitstop", &at->hitStop, hitStopList, IM_ARRAYSIZE(hitStopList)); im::SameLine(0.f, 20);
 	im::SetNextItemWidth(width);
 	im::InputInt("Custom##Hitstop", &at->hitStopTime, 0,0);
 
 	im::SetNextItemWidth(width);
-	im::InputInt("Set Hitstun", &at->hitStun, 0,0);  im::SameLine(0.f, 20); im::SetNextItemWidth(width);
-	im::InputInt("Add hitstun", &at->addHitStun, 0,0);
+	im::InputInt("Set hitstun", &at->hitStun, 0,0);  im::SameLine(0.f, 20); im::SetNextItemWidth(width);
+	im::InputInt("Self hitstop", &at->addHitStun, 0,0);
 
 	im::InputInt3("Hitstun decay", at->hitStunDecay);
 	im::SameLine(); im::TextDisabled("(?)");
@@ -408,12 +409,28 @@ inline void AfDisplay(Frame_AF *af, int &selectedLayer)
 
 	constexpr float width = 50.f;
 
+	im::SetNextItemWidth(width*3);
 	const int maxLayers = af->layers.size();
 	im::SliderInt("Layer", &selectedLayer, 0, maxLayers-1);
 	if(selectedLayer >= maxLayers)
 		selectedLayer = maxLayers-1;
 	if(selectedLayer < 0)
 		selectedLayer = 0;
+	
+	im::SameLine(0,20.f); im::SetNextItemWidth(width/2);
+	if(im::Button("Add"))
+	{
+		af->layers.push_back({});
+			selectedLayer++;
+	}
+	im::SameLine(0,0.f); im::SetNextItemWidth(width/2);
+	if(im::Button("Del") && maxLayers > 1)
+	{
+		af->layers.erase(af->layers.begin()+selectedLayer);
+		if(selectedLayer >= af->layers.size())
+			selectedLayer--;
+	}
+
 	auto *layer = &af->layers[selectedLayer];
 
 	im::SetNextItemWidth(width*3);
