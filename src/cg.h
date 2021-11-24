@@ -31,20 +31,20 @@ struct CG_Image {
 
 class CG {
 protected:
-	unsigned int *origPalette;
-	unsigned int *palette;
-	char *paletteData = nullptr;
+	unsigned int* origPalette;
+	unsigned int* palette;
+	char* paletteData = nullptr;
 	int palMax = 0;
 	int paletteOffset = 0;
 
-	char				*m_data;
+	char* m_data;
 	unsigned int			m_data_size;
 
-	const unsigned int		*m_indices;
+	const unsigned int* m_indices;
 
 	unsigned int			m_nimages;
 
-	const CG_Alignment	*m_align;
+	const CG_Alignment* m_align;
 	unsigned int			m_nalign;
 
 	struct ImageCell {
@@ -61,40 +61,41 @@ protected:
 		ImageCell		cell[256];
 	};
 
-	Page				*pages;
+	Page* pages;
 	unsigned int			page_count;
 
 	void			copy_cells(
-					const CG_Image *image,
-					const CG_Alignment *align,
-					unsigned char *pixels,
-					unsigned int x1,
-					unsigned int y1,
-					unsigned int width,
-					unsigned int height,
-					unsigned int *palette,
-					bool is_8bpp);
+		const CG_Image* image,
+		const CG_Alignment* align,
+		unsigned char* pixels,
+		unsigned int x1,
+		unsigned int y1,
+		unsigned int width,
+		unsigned int height,
+		unsigned int* palette,
+		bool is_8bpp);
 
 	void			build_image_table();
 
-	const CG_Image	*get_image(unsigned int n);
+	const CG_Image* get_image(unsigned int n);
 public:
 	bool m_loaded;
-	bool load(const char *name);
-	bool loadPalette(const char *name);
+	bool load(const char* name);
+	bool loadPalette(const char* name);
 	bool changePaletteNumber(int number);
 	int getPalNumber();
+	int getColorFromPal(unsigned char location);
 
 	void			free();
 
-	const char		*get_filename(unsigned int n);
+	const char* get_filename(unsigned int n);
 
 	ImageData* draw_texture(unsigned int n, bool to_pow2, bool draw_8bpp = 0);
 
 	int			get_image_count();
 
-				CG();
-				~CG();
+	CG();
+	~CG();
 };
 
 #endif /* CG_H_GUARD */

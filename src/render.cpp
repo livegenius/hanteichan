@@ -46,20 +46,21 @@ void main()
 
 const char* texturedSrcVert = R"(
 #version 120
-attribute vec2 Position;
-attribute vec2 UV;
+attribute vec3 Position;
+attribute vec3 UV;
 attribute vec4 Color;
 
 varying vec2 Frag_UV;
 varying vec4 Frag_Color;
 
 uniform mat4 ProjMtx;
+uniform bool Flip;
 
 void main()
 {
-	Frag_UV = UV;
+	Frag_UV = vec2(Flip?UV.z:UV.x,UV.y);
 	Frag_Color = Color;
-	gl_Position = ProjMtx * vec4(Position.xy, 0, 1);
+	gl_Position = ProjMtx * vec4(Position, 1);
 }
 )";
 
@@ -118,6 +119,7 @@ blendingMode(normal)
 	lProjectionS = sSimple.GetLoc("ProjMtx");
 	lProjectionT = sTextured.GetLoc("ProjMtx");
 	lAddColorT = sTextured.GetLoc("AddColor");
+	lFlip = sTextured.GetLoc("Flip");
 
 	vSprite.Prepare(sizeof(imageVertex), imageVertex);
 	vSprite.Load();
@@ -200,6 +202,7 @@ void Render::Draw()
 			view = glm::translate(view, glm::vec3(-128+layer.offset_x, -224+layer.offset_y, 0.f));
 			glUniform3f(lAddColorT, 0.f,0.f,0.f);
 			//if(i==)
+			SetFlip(lFlip, false);
 			SetMatrix(lProjectionT, globalView * view);
 			//SetMatrixPersp(lProjectionT, view);
 			glBindTexture(GL_TEXTURE_2D, texture.id);
@@ -241,6 +244,9 @@ void Render::Draw()
 				[this](float r, float g, float b){
 					glUniform3f(lAddColorT,r,g,b);
 				},
+				[this](bool flip) {
+					SetFlip(lFlip, flip);
+				},
 				colorRgba
 			);
 		}
@@ -265,6 +271,11 @@ void Render::Draw()
 		vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
 		
 	}
+}
+
+void Render::SetFlip(int lFlip, bool flip)
+{
+	glUniform1i(lFlip, flip);
 }
 
 void Render::SetMatrix(int lProjection, glm::mat4 view)

@@ -31,6 +31,7 @@ rightPane(&render, &framedata, currState),
 boxPane(&render, &framedata, currState),
 curPalette(0),
 x(0),y(150),
+parts(&cg),
 render(&cg, &parts)
 {
 	currState.layers = nullptr;

@@ -4,6 +4,8 @@
 /rel
 /data
 /.vscode
+/.vs
+/out
 
 *.ini
 *.exe
