@@ -101,13 +101,21 @@ void MainFrame::DrawBack()
 		for(int i = 0; i<clientRect.x*clientRect.y*4; i+=4) //Fix bad transparency issue.
 		{
 			auto& alpha = imageData[i+3];
-			auto alphaFactor = pow((double)alpha/255.0, 1.0/4.5);
-			alpha = alphaFactor *255;
-			imageData[i] /= alphaFactor;
-			imageData[i+1] /= alphaFactor;
-			imageData[i+2] /= alphaFactor;
+			auto alphaFactor = pow((double)alpha/255.0, 1.0/2.1);
+			if(alphaFactor > 0)
+			{
+				float rgb[3];
+				for(int ci = 0; ci < 3; ++ci)
+				{
+					rgb[ci] = (imageData[i+ci]/255.f) / alphaFactor;
+					if(rgb[ci] > 1.)
+						imageData[i+ci] = 255;
+					else
+						imageData[i+ci] = rgb[ci]*255;
+				}
+			}
 		}
-		//auto res = stbi_write_png("test.png", clientRect.x, clientRect.y, 4, imageData, 0);
+		
 		int len;
 		unsigned char* outData = stbi_write_png_to_mem(imageData, 0, clientRect.x, clientRect.y, 4, &len);
 		delete[] imageData;
@@ -290,6 +298,17 @@ void MainFrame::AdvanceFrame(int dir)
 		currState.frame = seq->frames.size()-1;
 }
 
+void MainFrame::ChangeOffset(int x, int y)
+{
+	auto seq = framedata.get_sequence(currState.pattern);
+	if(seq && currState.frame < seq->frames.size())
+	{
+		auto &l = seq->frames[currState.frame].AF.layers[currState.selectedLayer];
+		l.offset_x += x;
+		l.offset_y += y;
+	}
+}
+
 void MainFrame::UpdateBackProj(float x, float y)
 {
 	render.UpdateProj(x, y);
@@ -317,6 +336,33 @@ void MainFrame::RightClick(int x_, int y_)
 bool MainFrame::HandleKeys(uint64_t vkey)
 {
 	bool ctrlDown = GetAsyncKeyState(VK_CONTROL) & 0x8000; 
+	if(ctrlDown)
+	{
+		switch (vkey)
+		{
+		case 'S':
+			if(currentFilePath.empty())
+				currentFilePath = FileDialog(fileType::HA6, true);
+			if(!currentFilePath.empty())
+			{
+				framedata.save(currentFilePath.c_str());
+			}
+			return true;
+		case VK_UP:
+			ChangeOffset(0,-1);
+			return true;
+		case VK_DOWN:
+			ChangeOffset(0,1);
+			return true;
+		case VK_LEFT:
+			ChangeOffset(-1,0);
+			return true;
+		case VK_RIGHT:
+			ChangeOffset(1,0);
+			return true;
+		}
+	}
+
 	switch (vkey)
 	{
 	case VK_UP:
@@ -351,16 +397,6 @@ bool MainFrame::HandleKeys(uint64_t vkey)
 		return true;
 	}
 
-	if(ctrlDown && vkey == 'S')
-	{
-		if(currentFilePath.empty())
-			currentFilePath = FileDialog(fileType::HA6, true);
-		if(!currentFilePath.empty())
-		{
-			framedata.save(currentFilePath.c_str());
-		}
-		return true;
-	}
 	return false;
 }
 

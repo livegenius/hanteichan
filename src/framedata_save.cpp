@@ -28,7 +28,7 @@ void WriteAF(std::ofstream &file, const Frame_AF *af)
 		}
 
 		if(l.priority){
-			file.write("AFPR", 4);
+			file.write("AFPL", 4);
 			file.write(VAL(l.priority), 4);
 		}
 

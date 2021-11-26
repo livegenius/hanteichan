@@ -138,7 +138,7 @@ void MainPane::Draw()
 				}
 				if (im::TreeNode("Animation data"))
 				{
-					AfDisplay(&frame.AF, selectedLayer);
+					AfDisplay(&frame.AF, currState.selectedLayer);
 					im::TreePop();
 					im::Separator();
 				}
@@ -213,7 +213,7 @@ void MainPane::Draw()
 			{
 				auto &oAF = seq->frames[i].AF;
 				auto &iAF = seq->frames[currState.frame].AF;
-				auto &iLayer = iAF.layers[selectedLayer];
+				auto &iLayer = iAF.layers[currState.selectedLayer];
 				for(auto &oLayer : oAF.layers)
 				{
 					memcpy(oLayer.rgba, iLayer.rgba, sizeof(float)*4);

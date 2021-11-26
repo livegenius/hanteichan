@@ -22,7 +22,7 @@ private:
 
 	bool rangeWindow = false;
 	int ranges[2]{};
-	int selectedLayer = 0;
+	
 
 	struct SequenceWId{
 		int id;

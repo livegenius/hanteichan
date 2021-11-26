@@ -10,6 +10,7 @@ struct FrameState
 	std::vector<Layer> *layers;
 	bool animating;
 	int animeSeq;
+	int selectedLayer = 0;
 };
 //ImGui Windows that draw themselves. Just for utility.
 class DrawWindow

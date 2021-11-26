@@ -60,6 +60,7 @@ private:
 	void RenderUpdate();
 	void AdvancePattern(int dir);
 	void AdvanceFrame(int dir);
+	void ChangeOffset(int x, int y);
 
 	void SetZoom(int level);
 	void LoadTheme(int i );
