@@ -35,7 +35,6 @@ void main()
 
 const char* simpleSrcFrag = R"(
 #version 120
-
 varying vec4 Frag_Color;
 
 void main()
@@ -45,20 +44,20 @@ void main()
 )";
 
 const char* texturedSrcVert = R"(
-#version 120
+#version 130
 attribute vec3 Position;
-attribute vec3 UV;
+attribute vec4 UV;
 attribute vec4 Color;
 
 varying vec2 Frag_UV;
 varying vec4 Frag_Color;
 
 uniform mat4 ProjMtx;
-uniform bool Flip;
+uniform int Flip;
 
 void main()
 {
-	Frag_UV = vec2(Flip?UV.z:UV.x,UV.y);
+	Frag_UV = vec2((Flip&1)>0?UV.p:UV.s,(Flip&2)>0?UV.q:UV.t);
 	Frag_Color = Color;
 	gl_Position = ProjMtx * vec4(Position, 1);
 }
@@ -202,7 +201,7 @@ void Render::Draw()
 			view = glm::translate(view, glm::vec3(-128+layer.offset_x, -224+layer.offset_y, 0.f));
 			glUniform3f(lAddColorT, 0.f,0.f,0.f);
 			//if(i==)
-			SetFlip(lFlip, false);
+			SetFlip(lFlip, 0);
 			SetMatrix(lProjectionT, globalView * view);
 			//SetMatrixPersp(lProjectionT, view);
 			glBindTexture(GL_TEXTURE_2D, texture.id);
@@ -244,7 +243,7 @@ void Render::Draw()
 				[this](float r, float g, float b){
 					glUniform3f(lAddColorT,r,g,b);
 				},
-				[this](bool flip) {
+				[this](char flip) {
 					SetFlip(lFlip, flip);
 				},
 				colorRgba
@@ -273,7 +272,7 @@ void Render::Draw()
 	}
 }
 
-void Render::SetFlip(int lFlip, bool flip)
+void Render::SetFlip(int lFlip, char flip)
 {
 	glUniform1i(lFlip, flip);
 }

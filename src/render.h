@@ -42,7 +42,7 @@ private:
 	float colorRgba[4];
 
 	void AdjustImageQuad(int x, int y, int w, int h);
-	void SetFlip(int lFlip, bool flip);
+	void SetFlip(int lFlip, char flip);
 	void SetMatrix(int location, glm::mat4 view);
 	void SetMatrixPersp(int location, glm::mat4 view, glm::mat4 pre);
 	void SetBlendingMode();

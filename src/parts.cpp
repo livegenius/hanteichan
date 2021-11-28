@@ -38,7 +38,7 @@ struct DDS_HEADER
 	uint32_t        reserved2;
 };
 
-Parts::Parts(CG* cg) : cg(cg), partVertices(Vao::F3F3, GL_STATIC_DRAW)
+Parts::Parts(CG* cg) : cg(cg), partVertices(Vao::F3F4, GL_STATIC_DRAW)
 {
 
 }
@@ -48,18 +48,43 @@ unsigned int* Parts::VeLoad(unsigned int* data, const unsigned int* data_end, in
 	for (int id = 0; id < amount && data < data_end; id++) {
 		Shape sh{};
 		sh.type = data[0];
-		if (sh.type == 3 || sh.type == 4) {
+		switch (sh.type)
+		{
+		//Plane
+		case 1:
+		//Seems that no effect in MBTL is of type 2. No idea what it is.
+		case 2:
+			//do nothing
+			break;
+		//Ring
+		case 3: 
+		case 4:
 			sh.radius = data[3];
 			sh.width = data[4];
 			sh.vertexCount = data[5];
 			sh.length = data[6];
-		}
-		else if (sh.type == 6) {
+			sh.dz = data[7];
+			sh.dRadius = data[8];
+			break;
+		//Sphere
+		case 5:
 			sh.radius = data[3];
-			sh.width = data[4];
+			sh.vertexCount = data[4];
+			sh.vertexCount2 = data[5];
+			sh.length = data[6];
+			sh.length2 = data[7];
+			break;
+		//Cone...?
+		case 6:
+			sh.radius = data[3];
+			sh.dz = data[4];
 			sh.vertexCount = data[5];
-			sh.segment = data[6];
+			sh.vertexCount2 = data[6];
 			sh.length = data[7];
+			break;
+		default:
+			std::cout << "\tUnknown Shape type: " << sh.type << "\n";
+			break;
 		}
 		shapes.insert({ id,sh });
 		data += len;
@@ -299,8 +324,9 @@ unsigned int* Parts::PrLoad(unsigned int* data, const unsigned int* data_end, in
 			data = (unsigned int*)cdata;
 		}
 		else if (!memcmp(buf, "PRRV", 4)) { //Opt
+			//flip & 1 = flip horizontally; flip & 2 = flip vertically
 			unsigned char* cdata = (unsigned char*)data;
-			pr.reverse = *cdata;
+			pr.flip = *cdata;
 			++cdata;
 			data = (unsigned int*)cdata;
 		}
@@ -471,6 +497,7 @@ bool Parts::Load(const char* name)
 	cutOuts.clear();
 	gfxMeta.clear();
 	groups.clear();
+	shapes.clear();
 	partVertices.Clear();
 	MainLoad(d + 1, d_end);
 	std::cout << std::endl;
@@ -508,7 +535,7 @@ bool Parts::Load(const char* name)
 
 	//Load vertex data in vao.
 	std::vector<float> vertexData;
-	vertexData.reserve(128 * 5);
+	vertexData.reserve(128 * 7);
 	for (auto& partKv : cutOuts)
 	{
 		auto& part = partKv.second;
@@ -517,7 +544,7 @@ bool Parts::Load(const char* name)
 		constexpr int tXI[] = { 0,1,1, 1,0,0 };
 		constexpr int tYI[] = { 1,1,0, 0,0,1 };
 		struct {
-			float x, y, z, s, t, u;
+			float x, y, z, s, t, p, q;
 		}point[6];
 		float width = 256;//gfxMeta[part.texture].w/2.f;
 		float height = 256;//gfxMeta[part.texture].h/2.f;
@@ -526,58 +553,16 @@ bool Parts::Load(const char* name)
 			//std::cout << "There's no graphic id "<< part.texture<<" requested by part id "<<partKv.first<<"\n";
 			continue;
 		}
-		if (part.shapeIndex && shapes.count(part.shapeIndex) != 0 && (shapes[part.shapeIndex].type == 4 || shapes[part.shapeIndex].type == 3)) {
-			Shape s = shapes[part.shapeIndex];
-			auto size = vertexData.size();
-			vertexData.resize(size + 6 * s.vertexCount * 6);
-			float angle = 0;
-			float delta = glm::pi<float>() * s.length / 5000 / s.vertexCount;
-			switch (shapes[part.shapeIndex].type) {
-			case 3:
-				for (int i = 0; i < s.vertexCount; i++) {
-					for (int j = 0; j < 6; j++)
-					{
-						point[j].x = float(s.radius * glm::sin(angle + delta * tY[j]));
-						point[j].y = -float(s.radius * glm::cos(angle + delta * tY[j]));
-						point[j].z = float(s.width * -(tX[j] * 2 - 1));
-						point[j].s = float(part.uv[0] + part.uv[2] * (tX[j])) / width;
-						point[j].t = float(part.uv[1] + part.uv[3] * (i + tY[j]) / s.vertexCount) / height;
-						point[j].u = float(part.uv[0] + part.uv[2] * (1 - tX[j])) / width;
-					}
-					angle += delta;
-					memcpy(&vertexData[size + 6 * 6 * i], point, sizeof(point));
-				}
-				break;
-			case 4:
-				for (int i = 0; i < s.vertexCount; i++) {
-					for (int j = 0; j < 6; j++)
-					{
-						point[j].x = float((s.radius - (1 - tX[j]) * s.width) * glm::sin(angle + delta * tY[j]));
-						point[j].y = -float((s.radius - (1 - tX[j]) * s.width) * glm::cos(angle + delta * tY[j]));
-						point[j].z = 0;
-						point[j].s = float(part.uv[0] + part.uv[2] * (tX[j])) / width;
-						point[j].t = float(part.uv[1] + part.uv[3] * (i + tY[j]) / s.vertexCount) / height;
-						point[j].u = float(part.uv[0] + part.uv[2] * (1 - tX[j])) / width;
-					}
-					angle += delta;
-					memcpy(&vertexData[size + 6 * 6 * i], point, sizeof(point));
-				}
-				break;
-			//WIP
-			case 6:
-				for (int i = 0; i < s.vertexCount; i++) {
-					for (int j = 0; j < s.segment; j++) {
-						for (int k = 0; k < 6; k++)
-						{
-						}
-						angle += delta;
-						memcpy(&vertexData[size + 6 * (6 * s.segment * i + j)], point, sizeof(point));
-					}
-				}
-				break;
-			}
+		if (shapes.count(part.shapeIndex) == 0) {
+			continue;
 		}
-		else {
+		Shape s = shapes[part.shapeIndex];
+		auto size = vertexData.size();
+		switch (s.type)
+		{
+		case 1:
+		case 2:
+		{
 			for (int i = 0; i < 6; i++)
 			{
 				point[i].x = -part.xy[0] + part.wh[0] * tX[i];
@@ -585,25 +570,147 @@ bool Parts::Load(const char* name)
 				point[i].z = 0;
 				point[i].s = float(part.uv[0] + part.uv[2] * tX[i]) / width;
 				point[i].t = float(part.uv[1] + part.uv[3] * tY[i]) / height;
-				point[i].u = float(part.uv[0] + part.uv[2] * (1 - tX[i])) / width;
+				point[i].p = float(part.uv[0] + part.uv[2] * (1 - tX[i])) / width;
+				point[i].q = float(part.uv[1] + part.uv[3] * (1 - tY[i])) / height;
 			}
-			auto size = vertexData.size();
-			vertexData.resize(size + 6 * 6);
+			vertexData.resize(size + 6 * 7);
 			memcpy(&vertexData[size], point, sizeof(point));
+			break;
+		}
+		case 3:
+		{
+			float angle = 0;
+			float delta = glm::pi<float>() * s.length / 5000 / s.vertexCount;
+			vertexData.resize(size + 6 * s.vertexCount * 7);
+			for (int i = 0; i < s.vertexCount; i++) {
+				for (int j = 0; j < 6; j++)
+				{
+					point[j].x = float(s.radius - float(s.dRadius * (i + tY[j])) / s.vertexCount) * glm::sin(angle + delta * tY[j]);
+					point[j].y = -float(s.radius - float(s.dRadius * (i + tY[j])) / s.vertexCount) * glm::cos(angle + delta * tY[j]);
+					point[j].z = float(s.width * -(tX[j] * 2 - 1) - ((i + tY[j] == s.vertexCount && s.length == 10000) ? 0 : float(s.dz * (i + tY[j])) / s.vertexCount));
+					point[j].s = float(part.uv[0] + part.uv[2] * (tX[j])) / width;
+					point[j].t = float(part.uv[1] + 1.0f * part.uv[3] * (i + tY[j]) / s.vertexCount) / height;
+					point[j].p = float(part.uv[0] + part.uv[2] * (1 - tX[j])) / width;
+					point[j].q = float(part.uv[1] + 1.0f * part.uv[3] * (s.vertexCount - i - tY[j]) / s.vertexCount) / height;
+				}
+				angle += delta;
+				memcpy(&vertexData[size + 6 * 7 * i], point, sizeof(point));
+			}
+			break;
+		}
+		case 4:
+		{
+			float angle = 0;
+			float delta = glm::pi<float>() * s.length / 5000 / s.vertexCount;
+			vertexData.resize(size + 6 * s.vertexCount * 7);
+			for (int i = 0; i < s.vertexCount; i++) {
+				for (int j = 0; j < 6; j++)
+				{
+					point[j].x = float((s.radius - (1 - tX[j]) * s.width - float(s.dRadius * (i + tY[j])) / s.vertexCount) * glm::sin(angle + delta * tY[j]));
+					point[j].y = -float((s.radius - (1 - tX[j]) * s.width - float(s.dRadius * (i + tY[j])) / s.vertexCount) * glm::cos(angle + delta * tY[j]));
+					point[j].z = -((i + tY[j] == s.vertexCount && s.length == 10000) ? 0 : float(s.dz * (i + tY[j])) / s.vertexCount);
+					point[j].s = float(part.uv[0] + part.uv[2] * (tX[j])) / width;
+					point[j].t = float(part.uv[1] + 1.0f * part.uv[3] * (i + tY[j]) / s.vertexCount) / height;
+					point[j].p = float(part.uv[0] + part.uv[2] * (1 - tX[j])) / width;
+					point[j].q = float(part.uv[1] + 1.0f * part.uv[3] * (s.vertexCount - i - tY[j]) / s.vertexCount) / height;
+				}
+				angle += delta;
+				memcpy(&vertexData[size + 6 * 7 * i], point, sizeof(point));
+			}
+			break;
+		}
+		case 5:
+		{
+			float angle = 0;
+			float delta = glm::pi<float>() * s.length / 5000 / s.vertexCount;
+			float angle2 = 0;
+			float delta2 = glm::pi<float>() * s.length2 / 10000 / s.vertexCount2;
+			vertexData.resize(size + 6 * s.vertexCount * s.vertexCount2 * 7);
+			for (int i = 0; i < s.vertexCount; i++) {
+				angle2 = 0;
+				for (int j = 0; j < s.vertexCount2; j++) {
+					for (int k = 0; k < 6; k++)
+					{
+						point[k].x = float((s.radius) * glm::sin(angle2 + delta2 * tX[k]) * glm::sin(angle + delta * tY[k]));
+						point[k].y = float((s.radius) * glm::sin(angle2 + delta2 * tX[k]) * glm::cos(angle + delta * tY[k]));
+						point[k].z = s.radius * glm::cos(angle2 + delta2 * tX[k]);
+						point[k].s = float(part.uv[0] + float(part.uv[2] * (i + tY[k])) / s.vertexCount) / width;
+						point[k].t = float(part.uv[1] + float(part.uv[3] * (j + tX[k]) / s.vertexCount2)) / height;
+						point[k].p = float(part.uv[0] + float(part.uv[2] * (s.vertexCount - i - tY[k])) / s.vertexCount) / width;
+						point[k].q = float(part.uv[1] + float(part.uv[3] * (s.vertexCount2 - j - tX[k]) / s.vertexCount2)) / height;
+					}
+					memcpy(&vertexData[size + 6 * 7 * (s.vertexCount2 * i + j)], point, sizeof(point));
+					angle2 += delta2;
+				}
+				angle += delta;
+			}
+			break;
+		}
+		case 6:
+		{
+			float angle = 0;
+			float delta = glm::pi<float>() * s.length / 5000 / s.vertexCount;
+			vertexData.resize(size + 6 * s.vertexCount * s.vertexCount2 * 7);
+			float w = float(s.radius) / s.vertexCount2;
+			for (int i = 0; i < s.vertexCount; i++) {
+				for (int j = 0; j < s.vertexCount2; j++) {
+					for (int k = 0; k < 6; k++) {
+						point[k].x = -w * (s.vertexCount2 - 1 - j + tX[k]) * glm::sin(angle + delta * tY[k]);
+						point[k].y = -w * (s.vertexCount2 - 1 - j + tX[k]) * glm::cos(angle + delta * tY[k]);
+						point[k].z = -s.dz * float(j + (1 - tX[k])) / s.vertexCount2;
+						point[k].s = float(part.uv[0] + 1.0f * part.uv[2] * (i + tY[k]) / s.vertexCount) / width;
+						point[k].t = float(part.uv[1] + 1.0f * part.uv[3] * (1 + j - tX[k]) / s.vertexCount2) / height;
+						point[k].p = float(part.uv[0] + 1.0f * part.uv[2] * (s.vertexCount - i - tY[k]) / s.vertexCount) / width;
+						point[k].q = float(part.uv[1] + 1.0f * part.uv[3] * (s.vertexCount2 - 1 - j + tX[k]) / s.vertexCount2) / height;
+					}
+					memcpy(&vertexData[size + 6 * 7 * (s.vertexCount2 * i + j)], point, sizeof(point));
+				}
+				angle += delta;
+			}
+			break;
+		}
+		default:
+			continue;
+			break;
 		}
 	}
 	int index = 0;
 	for (auto& cutOut : cutOuts)
 	{
-		if (gfxMeta.count(cutOut.second.texture) == 0)
+		if (gfxMeta.count(cutOut.second.texture) == 0) {
 			continue;
-		if (cutOut.second.shapeIndex && shapes.count(cutOut.second.shapeIndex) != 0 && (shapes[cutOut.second.shapeIndex].type == 4 || shapes[cutOut.second.shapeIndex].type == 3)) {
-			cutOut.second.vaoIndex = partVertices.Prepare(6 * 6 * shapes[cutOut.second.shapeIndex].vertexCount * sizeof(float), &vertexData[index]);
-			index += 6 * 6 * shapes[cutOut.second.shapeIndex].vertexCount;
 		}
-		else {
-			cutOut.second.vaoIndex = partVertices.Prepare(6 * 6 * sizeof(float), &vertexData[index]);
-			index += 6 * 6;
+		if (shapes.count(cutOut.second.shapeIndex) == 0) {
+			continue;
+		}
+		Shape s = shapes[cutOut.second.shapeIndex];
+		switch (s.type) {
+		case 1:
+		case 2:
+		{
+			cutOut.second.vaoIndex = partVertices.Prepare(6 * 7 * sizeof(float), &vertexData[index]);
+			index += 6 * 7;
+			break;
+		}
+		case 3:
+		case 4:
+		{
+			cutOut.second.vaoIndex = partVertices.Prepare(6 * 7 * shapes[cutOut.second.shapeIndex].vertexCount * sizeof(float), &vertexData[index]);
+			index += 6 * 7 * shapes[cutOut.second.shapeIndex].vertexCount;
+			break;
+		}
+		case 5:
+		{
+			cutOut.second.vaoIndex = partVertices.Prepare(6 * 7 * shapes[cutOut.second.shapeIndex].vertexCount * shapes[cutOut.second.shapeIndex].vertexCount2 * sizeof(float), &vertexData[index]);
+			index += 6 * 7 * shapes[cutOut.second.shapeIndex].vertexCount * shapes[cutOut.second.shapeIndex].vertexCount2;
+			break;
+		}
+		case 6:
+		{
+			cutOut.second.vaoIndex = partVertices.Prepare(6 * 7 * shapes[cutOut.second.shapeIndex].vertexCount * shapes[cutOut.second.shapeIndex].vertexCount2 * sizeof(float), &vertexData[index]);
+			index += 6 * 7 * shapes[cutOut.second.shapeIndex].vertexCount * shapes[cutOut.second.shapeIndex].vertexCount2;
+			break;
+		}
 		}
 	}
 
@@ -624,7 +731,7 @@ bool Parts::Load(const char* name)
 void Parts::Draw(int pattern,
 	std::function<void(glm::mat4)> setMatrix,
 	std::function<void(float, float, float)> setAddColor,
-	std::function<void(bool)> setFlip, float color[4])
+	std::function<void(char)> setFlip, float color[4])
 {
 	curTexId = -1;
 	if (groups.count(pattern))
@@ -644,7 +751,7 @@ void Parts::Draw(int pattern,
 			view = glm::rotate(view, -part.rotation[0] * tau, glm::vec3(1.0, 0.f, 0.f));
 			view = glm::rotate(view, part.rotation[2] * tau, glm::vec3(0.0, 0.f, 1.f));
 
-			setFlip(part.reverse);
+			setFlip(part.flip);
 
 			view = glm::scale(view, glm::vec3(part.scaleX, part.scaleY, 1.f));
 

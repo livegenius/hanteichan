@@ -12,6 +12,9 @@ quadCount(nullptr), quadIndexes(nullptr)
 	case F2F2:
 		stride = 4 * sizeof(float);
 		break;
+	case F3F4:
+		stride = 7 * sizeof(float);
+		break;
 	case F3F3:
 		stride = 6 * sizeof(float);
 		break;
@@ -110,7 +113,13 @@ void Vao::Bind()
 	case F2F2:
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, nullptr);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float)*2));
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float) * 2));
+		glEnableVertexAttribArray(1);
+		break;
+	case F3F4:
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, nullptr);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float)*3));
 		glEnableVertexAttribArray(1);
 		break;
 	}
@@ -143,7 +152,13 @@ void Vao::Load()
 	case F2F2:
 		glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, stride, nullptr);
 		glEnableVertexAttribArray(0);
-		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float)*2));
+		glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float) * 2));
+		glEnableVertexAttribArray(1);
+		break;
+	case F3F4:
+		glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, nullptr);
+		glEnableVertexAttribArray(0);
+		glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, stride, (void*)(sizeof(float) * 3));
 		glEnableVertexAttribArray(1);
 		break;
 	}

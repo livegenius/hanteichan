@@ -11,6 +11,7 @@ public:
 	enum AttribType
 	{
 		F2F2, //Textures
+		F3F4, //Textures
 		F3F3 //Color only
 	};
 

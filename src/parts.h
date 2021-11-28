@@ -19,10 +19,13 @@ public:
 	{
 		int type;
 		int vertexCount;
+		int vertexCount2;
 		int length;
+		int length2;
 		int radius;
+		int dRadius;
 		int width;
-		int segment;
+		int dz;
 	};
 
 	//Box cut-out
@@ -62,7 +65,7 @@ public:
 		int ppId;
 		bool additive;
 		bool filter;
-		bool reverse;
+		char flip;
 		unsigned char bgra[4] = { 255,255,255,255 };
 		unsigned char addColor[4] = { 0,0,0,0 };
 	};
@@ -95,7 +98,7 @@ public:
 	PartGfx* GetTexture(unsigned int n);
 	void Draw(int pattern, std::function<void(glm::mat4)> setMatrix,
 		std::function<void(float, float, float)> setAddColor,
-		std::function<void(bool)> setFlip, float color[4]);
+		std::function<void(char)> setFlip, float color[4]);
 
 };
 
