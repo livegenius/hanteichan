@@ -585,9 +585,9 @@ bool Parts::Load(const char* name)
 			for (int i = 0; i < s.vertexCount; i++) {
 				for (int j = 0; j < 6; j++)
 				{
-					point[j].x = float(s.radius - float(s.dRadius * (i + tY[j])) / s.vertexCount) * glm::sin(angle + delta * tY[j]);
-					point[j].y = -float(s.radius - float(s.dRadius * (i + tY[j])) / s.vertexCount) * glm::cos(angle + delta * tY[j]);
-					point[j].z = float(s.width * -(tX[j] * 2 - 1) - ((i + tY[j] == s.vertexCount && s.length == 10000) ? 0 : float(s.dz * (i + tY[j])) / s.vertexCount));
+					point[j].x = float(s.radius - ((i + tY[j] == s.vertexCount && s.length == 10000) ? 0 : float(s.dRadius * (i + tY[j])) / s.vertexCount)) * glm::sin(angle + delta * tY[j]);
+					point[j].y = -float(s.radius - ((i + tY[j] == s.vertexCount && s.length == 10000) ? 0 : float(s.dRadius * (i + tY[j])) / s.vertexCount)) * glm::cos(angle + delta * tY[j]);
+					point[j].z = float(s.width * -(tX[j] * 2 - 1) - float(s.dz * (i + tY[j])) / s.vertexCount);
 					point[j].s = float(part.uv[0] + part.uv[2] * (tX[j])) / width;
 					point[j].t = float(part.uv[1] + 1.0f * part.uv[3] * (i + tY[j]) / s.vertexCount) / height;
 					point[j].p = float(part.uv[0] + part.uv[2] * (1 - tX[j])) / width;
@@ -606,9 +606,9 @@ bool Parts::Load(const char* name)
 			for (int i = 0; i < s.vertexCount; i++) {
 				for (int j = 0; j < 6; j++)
 				{
-					point[j].x = float((s.radius - (1 - tX[j]) * s.width - float(s.dRadius * (i + tY[j])) / s.vertexCount) * glm::sin(angle + delta * tY[j]));
-					point[j].y = -float((s.radius - (1 - tX[j]) * s.width - float(s.dRadius * (i + tY[j])) / s.vertexCount) * glm::cos(angle + delta * tY[j]));
-					point[j].z = -((i + tY[j] == s.vertexCount && s.length == 10000) ? 0 : float(s.dz * (i + tY[j])) / s.vertexCount);
+					point[j].x = float((s.radius - (1 - tX[j]) * s.width - ((i + tY[j] == s.vertexCount && s.length == 10000) ? 0 : float(s.dRadius * (i + tY[j])) / s.vertexCount)) * glm::sin(angle + delta * tY[j]));
+					point[j].y = -float((s.radius - (1 - tX[j]) * s.width - ((i + tY[j] == s.vertexCount && s.length == 10000) ? 0 : float(s.dRadius * (i + tY[j])) / s.vertexCount)) * glm::cos(angle + delta * tY[j]));
+					point[j].z = -float(s.dz * (i + tY[j])) / s.vertexCount;
 					point[j].s = float(part.uv[0] + part.uv[2] * (tX[j])) / width;
 					point[j].t = float(part.uv[1] + 1.0f * part.uv[3] * (i + tY[j]) / s.vertexCount) / height;
 					point[j].p = float(part.uv[0] + part.uv[2] * (1 - tX[j])) / width;
