@@ -91,17 +91,16 @@ void MainPane::Draw()
 					seq->frames.back().AF.layers.resize(3);
 					currState.frame = 0;
 				}
-				
 			}
 
 			im::BeginChild("FrameInfo", {0, im::GetWindowSize().y-im::GetFrameHeight()*4-8}, false, ImGuiWindowFlags_HorizontalScrollbar);
 			if (im::TreeNode("Pattern data"))
 			{
-				if(im::InputText("Pattern name", &seq->name))
+				if(PatternDisplay(seq))
 				{
 					decoratedNames[currState.pattern] = frameData->GetDecoratedName(currState.pattern);
 				}
-				PatternDisplay(seq);
+
 				if(im::Button("Copy pattern")){
 					copiedPattern = *seq;
 				}

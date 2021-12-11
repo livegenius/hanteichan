@@ -76,7 +76,7 @@ void WriteAF(std::ofstream &file, const Frame_AF *af)
 		}
 	}
 
-	if(af->duration >=0 && af->duration < 10){
+	if(af->duration > 0 && af->duration < 10){
 		char t = af->duration + '0';
 		file.write("AFD", 3);
 		file.write(VAL(t), 1);

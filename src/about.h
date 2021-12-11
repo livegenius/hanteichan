@@ -19,14 +19,14 @@ public:
 		if(isVisible)
 		{
 			ImGui::PushStyleColor(ImGuiCol_WindowBg, ImVec4(1,1,1,0.3));
-			ImGui::SetNextWindowSize(ImVec2{400,155});
+			ImGui::SetNextWindowSize(ImVec2{400,195});
 			ImGui::Begin("About", &isVisible, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
 			ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0,0,0,1));
 			ImGui::Text("Hantei-chan v" HA6GUIVERSION);
 			ImGui::Separator();
 			ImGui::Text("Made by omanko.");
 			ImGui::Spacing();
-			ImGui::Text("Special thanks to mauve, MadScientist, u4ick and Rhekar.");
+			ImGui::Text("Special thanks to:\nEiton for the effect rendering code\nu4ick and Rhekar for advice and reporting bugs.");
 			ImGui::Separator();
 			ImGui::Text("\nApplication average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
 			ImGui::End();
@@ -45,14 +45,15 @@ public:
 	{
 		if(isVisible)
 		{
-			ImGui::SetNextWindowSize(ImVec2{375,305});
-			ImGui::Begin("Shortcuts", &isVisible, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+			ImGui::SetNextWindowSize(ImVec2{385,305});
+			ImGui::Begin("Shortcuts", &isVisible, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse);
 
 			constexpr const char *shortcutText[] = {
 				"Up", "Next pattern",
 				"Down", "Previous pattern",
 				"Right", "Next frame",
 				"Left", "Previous frame",
+				"Ctrl + Arrow keys", "Move sprite 1px",
 				"X", "Next box",
 				"Z", "Previous box",
 				"P", "Output current view as image",
