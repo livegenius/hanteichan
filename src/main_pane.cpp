@@ -109,6 +109,7 @@ void MainPane::Draw()
 				if(im::Button("Paste pattern")){
 					*seq = copiedPattern;
 					decoratedNames[currState.pattern] = frameData->GetDecoratedName(currState.pattern);
+					nframes = seq->frames.size() - 1;
 				}
 
 				if(im::Button("Push pattern copy"))
@@ -120,6 +121,7 @@ void MainPane::Draw()
 				{
 					PopCopies();
 					RegenerateNames();
+					nframes = seq->frames.size() - 1;
 				}
 				im::SameLine(0,20.f);
 				im::Text("%llu copies", patCopyStack.size());
