@@ -92,7 +92,23 @@ void MainFrame::DrawBack()
 		size_t size = clientRect.x*clientRect.y*4;
 		unsigned char* imageData = new unsigned char[size];
 		glReadPixels(0, 0, clientRect.x, clientRect.y, GL_RGBA, GL_UNSIGNED_BYTE, imageData);
-		//auto res = stbi_write_png("test.png", clientRect.x, clientRect.y, 4, imageData, 0);
+		for(int i = 0; i<clientRect.x*clientRect.y*4; i+=4) //Fix bad transparency issue.
+		{
+			auto& alpha = imageData[i+3];
+			auto alphaFactor = pow((double)alpha/255.0, 1.0/2.2);
+			if(alphaFactor > 0)
+			{
+				float rgb[3];
+				for(int ci = 0; ci < 3; ++ci)
+				{
+					rgb[ci] = (imageData[i+ci]/255.f) / alphaFactor;
+					if(rgb[ci] > 1.)
+						imageData[i+ci] = 255;
+					else
+						imageData[i+ci] = rgb[ci]*255;
+				}
+			}
+		}
 		int len;
 		unsigned char* outData = stbi_write_png_to_mem(imageData, 0, clientRect.x, clientRect.y, 4, &len);
 		delete[] imageData;
@@ -273,6 +289,17 @@ void MainFrame::RenderUpdate()
 	render.SwitchImage(currState.spriteId, currState.usePat);
 }
 
+void MainFrame::ChangeOffset(int x, int y)
+{
+	auto seq = framedata.get_sequence(currState.pattern);
+	if(seq && currState.frame < seq->frames.size())
+	{
+		auto &l = seq->frames[currState.frame].AF;
+		l.offset_x += x;
+		l.offset_y += y;
+	}
+}
+
 void MainFrame::AdvancePattern(int dir)
 {
 	currState.pattern+= dir;
@@ -319,7 +346,34 @@ void MainFrame::RightClick(int x_, int y_)
 
 bool MainFrame::HandleKeys(uint64_t vkey)
 {
-	//bool ctrlDown = GetAsyncKeyState(VK_CONTROL) & 0x8000; 
+	bool ctrlDown = GetAsyncKeyState(VK_CONTROL) & 0x8000; 
+	if(ctrlDown)
+	{
+		switch (vkey)
+		{
+		case 'S':
+			if(currentFilePath.empty())
+				currentFilePath = FileDialog(fileType::HA6, true);
+			if(!currentFilePath.empty())
+			{
+				framedata.save(currentFilePath.c_str());
+			}
+			return true;
+		case VK_UP:
+			ChangeOffset(0,-1);
+			return true;
+		case VK_DOWN:
+			ChangeOffset(0,1);
+			return true;
+		case VK_LEFT:
+			ChangeOffset(-1,0);
+			return true;
+		case VK_RIGHT:
+			ChangeOffset(1,0);
+			return true;
+		}
+	}
+
 	switch (vkey)
 	{
 	case VK_UP:
@@ -349,7 +403,11 @@ bool MainFrame::HandleKeys(uint64_t vkey)
 	case 'L':
 		render.drawLines = !render.drawLines;
 		return true;
+	case 'H':
+		render.drawBoxes = !render.drawBoxes;
+		return true;
 	}
+
 	return false;
 }
 
@@ -457,8 +515,7 @@ void MainFrame::Menu(unsigned int errorPopupId)
 			}
 
 			ImGui::Separator();
-			//TODO: Implement hotkeys, someday.
-			if (ImGui::MenuItem("Save"/* , "Ctrl+S" */)) 
+			if (ImGui::MenuItem("Save", "Ctrl+S" )) 
 			{
 				if(currentFilePath.empty())
 					currentFilePath = FileDialog(fileType::HA6, true);
@@ -477,17 +534,6 @@ void MainFrame::Menu(unsigned int errorPopupId)
 					currentFilePath = file;
 				}
 			}
-
-			#ifdef EXPORT2CHAR
-			if (ImGui::MenuItem("Export to char 0.99.3...")) 
-			{
-				std::string &&file = FileDialog(fileType::CHR, true);
-				if(!file.empty())
-				{
-					framedata.saveChar(file);
-				}
-			}
-			#endif
 
 			ImGui::Separator();
 			if (ImGui::MenuItem("Load CG...")) 

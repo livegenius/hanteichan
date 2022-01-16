@@ -229,22 +229,20 @@ void Render::Draw()
 	//Reset state
 	glBlendEquation(GL_FUNC_ADD);
 	sSimple.Use();
-	vGeometry.Bind();
-	if(screenShot)
+	if(drawBoxes)
 	{
-		glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
-		glUniform1f(lAlphaS, 1.0f);
-		vGeometry.DrawQuads(GL_LINE_LOOP, quadsToDraw);
-		glUniform1f(lAlphaS, 0.5f);
-		vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
-	}
-	else
-	{
-		glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		vGeometry.Bind();
+		if(screenShot){
+			glBlendFuncSeparate(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA, GL_SRC_ALPHA, GL_ONE);
+		}
+		else{
+			glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+		}
 		glUniform1f(lAlphaS, 0.6f);
 		vGeometry.DrawQuads(GL_LINE_LOOP, quadsToDraw);
 		glUniform1f(lAlphaS, 0.3f);
 		vGeometry.DrawQuads(GL_TRIANGLE_FAN, quadsToDraw);
+		
 	}
 }
 

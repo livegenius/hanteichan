@@ -18,6 +18,7 @@ public:
 
 private:
 	BoxList copiedBoxes;
+	Hitbox copiedBox;
 	std::string boxNameList[33];
 	int currentBox;
 	bool highlight;

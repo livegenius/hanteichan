@@ -45,18 +45,20 @@ public:
 	{
 		if(isVisible)
 		{
-			ImGui::SetNextWindowSize(ImVec2{375,305});
-			ImGui::Begin("Shortcuts", &isVisible, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse);
+			ImGui::SetNextWindowSize(ImVec2{385,305});
+			ImGui::Begin("Shortcuts", &isVisible, ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoCollapse);
 
 			constexpr const char *shortcutText[] = {
 				"Up", "Next pattern",
 				"Down", "Previous pattern",
 				"Right", "Next frame",
 				"Left", "Previous frame",
+				"Ctrl + Arrow keys", "Move sprite 1px",
 				"X", "Next box",
 				"Z", "Previous box",
 				"P", "Output current view as image",
 				"L", "Toggle axis",
+				"H", "Toggle hitboxes",
 				"F", "Hide user interface",
 				"-","-",
 				"Right click & drag", "Draw box",

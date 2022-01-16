@@ -166,17 +166,14 @@ struct Sequence {
 
 class FrameData {
 private:
-	unsigned int	m_nsequences;
+	unsigned int  m_nsequences;
 
-	
 public:
-
-	bool		m_loaded;
+	bool m_loaded;
 	std::vector<Sequence> m_sequences;
 	void initEmpty();
 	bool load(const char *filename, bool patch = false);
 	void save(const char *filename);
-	void saveChar(std::string filename);
 
 	//Probably unnecessary.
 	//bool load_move_list(Pack *pack, const char *filename);

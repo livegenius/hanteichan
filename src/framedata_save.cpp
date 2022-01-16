@@ -25,7 +25,7 @@ void WriteAF(std::ofstream &file, const Frame_AF *af)
 		file.write(VAL(af->offset_y), 4);
 	}
 
-	if(af->duration >=0 && af->duration < 10){
+	if(af->duration >0 && af->duration < 10){
 		char t = af->duration + '0';
 		file.write("AFD", 3);
 		file.write(VAL(t), 1);
@@ -168,6 +168,10 @@ void WriteAS(std::ofstream &file, const Frame_AS *as)
 		file.write("ASCT", 4);
 		file.write(VAL(as->counterType), 4);
 	}
+	if(as->hitsNumber){
+		file.write("ASAA", 4);
+		file.write(VAL(as->hitsNumber), 4);
+	}
 	if(as->statusFlags[0])
 	{
 		file.write("ASF0", 4);
@@ -189,15 +193,10 @@ void WriteAS(std::ofstream &file, const Frame_AS *as)
 		file.write(PTR(as->sineParameters), 4*4);
 		file.write(PTR(as->sinePhases), 2*sizeof(float));
 	}
-	if(as->hitsNumber){
-		file.write("ASAA", 4);
-		file.write(VAL(as->hitsNumber), 4);
-	}
 	if(as->invincibility){
 		file.write("ASYS", 4);
 		file.write(VAL(as->invincibility), 4);
 	}
-
 
 	file.write("ASED", 4);
 }
@@ -293,43 +292,93 @@ void WriteAT(std::ofstream &file, const Frame_AT *at)
 
 void WriteEF(std::ofstream &file, const std::vector<Frame_EF> &ef)
 {
-	constexpr int paramN = 12;
+	constexpr size_t maxParam = 12;
 	for(int i = 0; i < ef.size(); i++)
 	{
+		int paramN = 0;
+		for(int j = 0; j < maxParam; j++)
+		{
+			if(ef[i].parameters[j])
+				paramN = j+1;
+		}
 		file.write("EFST", 4);
 		file.write(VAL(i), 4);
 		file.write("EFTP", 4);
 		file.write(VAL(ef[i].type), 4);
 		file.write("EFNO", 4);
 		file.write(VAL(ef[i].number), 4);
-		file.write("EFPR", 4);
-		file.write(VAL(paramN), 4);
-		file.write(PTR(ef[i].parameters), 12*4);
+		if(paramN)
+		{
+			file.write("EFPR", 4);
+			file.write(VAL(paramN), 4);
+			file.write(PTR(ef[i].parameters), paramN*4);
+		}
 		file.write("EFED", 4);
 	}
 }
 
-void WriteIF(std::ofstream &file, const std::vector<Frame_IF> &ef)
+void WriteIF(std::ofstream &file, const std::vector<Frame_IF> &ifs)
 {
-	constexpr int paramN = 9;
-	for(int i = 0; i < ef.size(); i++)
+	constexpr size_t maxParam = 9;
+	for(int i = 0; i < ifs.size(); i++)
 	{
+		int paramN = 0;
+		for(int j = 0; j < maxParam; j++)
+		{
+			if(ifs[i].parameters[j])
+				paramN = j+1;
+		}
 		file.write("IFST", 4);
 		file.write(VAL(i), 4);
 		file.write("IFTP", 4);
-		file.write(VAL(ef[i].type), 4);
-		file.write("IFPR", 4);
-		file.write(VAL(paramN), 4);
-		file.write(PTR(ef[i].parameters), 9*4);
+		file.write(VAL(ifs[i].type), 4);
+		if(paramN)
+		{
+			file.write("IFPR", 4);
+			file.write(VAL(paramN), 4);
+			file.write(PTR(ifs[i].parameters), paramN*4);
+		}
 		file.write("IFED", 4);
 	}
 }
 
-void WriteFrame(std::ofstream &file, const Frame *frame)
+
+struct PatInfo
+{
+	std::vector<const int*> boxList;
+	std::vector<const Frame_AS*> asList;
+
+	//out info
+	int totalBoxes = 0;
+	int totalAses = 0;
+	int totalAts = 0;
+};
+
+void WriteFrame(std::ofstream &file, const Frame *frame, PatInfo &patInfo)
 {
 	file.write("FSTR", 4);
 	WriteAF(file, &frame->AF);
-	WriteAS(file, &frame->AS);
+	
+	int dupeAsIndex = -1;
+	for(int i = 0; i < patInfo.asList.size(); ++i)
+	{
+		if(!memcmp(&frame->AS, patInfo.asList[i], sizeof(Frame_AS)))
+		{
+			dupeAsIndex = i;
+			break;
+		}
+	}
+	if(dupeAsIndex >= 0)
+	{
+		file.write("ASSM", 4);
+		file.write(VAL(dupeAsIndex), 4);
+	}
+	else
+	{
+		WriteAS(file, &frame->AS);
+		patInfo.asList.push_back(&frame->AS);
+		patInfo.totalAses += 1;
+	}
 
 
 	bool hasAt = false;
@@ -369,23 +418,60 @@ void WriteFrame(std::ofstream &file, const Frame *frame)
 		file.write(VAL(val), 4);
 	}
 
-	constexpr Frame_AT defAT{};
-	if(!!memcmp(&frame->AT, &defAT, sizeof(Frame_AT)) || hasAt)
+	if(hasAt)
+	{
 		WriteAT(file, &frame->AT);
+		patInfo.totalAts += 1;
+	}
 
 	for(const auto& box : frame->hitboxes)
 	{
 		int index = box.first;
+		
+		int dupeIndex = -1;
+		for(int i = patInfo.boxList.size()-1; i >= 0; --i)
+		{
+			if(!memcmp(box.second.xy, patInfo.boxList[i], sizeof(int)*4))
+			{
+				dupeIndex = i;
+				break;
+			}
+		}
+		
 		if(box.first >= 25)
 		{
 			index -= 25;
-			file.write("HRAT", 4);
+			if(dupeIndex >= 0)
+				file.write("HRAS", 4);
+			else
+			{
+				file.write("HRAT", 4);
+				//patInfo.attackList.push_back(box.second.xy);
+			}
 		}
 		else
-			file.write("HRNM", 4);
+		{
+			if(dupeIndex >= 0)
+				file.write("HRNS", 4);
+			else
+			{
+				file.write("HRNM", 4);
+				//patInfo.hurtList.push_back(box.second.xy);
+			}
+		}
 
-		file.write(VAL(index), 4);
-		file.write(PTR(box.second.xy), 4*4);
+		if(dupeIndex >= 0)
+		{
+			file.write(VAL(index), 4);
+			file.write(VAL(dupeIndex), 4);
+		}
+		else
+		{
+			file.write(VAL(index), 4);
+			file.write(PTR(box.second.xy), 4*4);
+			patInfo.boxList.push_back(box.second.xy);
+			patInfo.totalBoxes += 1;
+		}
 	}
 	
 	WriteEF(file, frame->EF);
@@ -396,13 +482,6 @@ void WriteFrame(std::ofstream &file, const Frame *frame)
 
 void WriteSequence(std::ofstream &file, const Sequence *seq)
 {
-	//Not used by melty blood, probably.
-/* 	if(!seq->codeName.empty()){
-		uint32_t size = seq->codeName.size();
-		file.write("PTCN", 4);
-		file.write(VAL(size), 4);
-		file.write(PTR(seq->codeName.data()), size);
-	} */
 	if(seq->psts){
 		file.write("PSTS", 4);
 		file.write(VAL(seq->psts), 4);
@@ -425,33 +504,35 @@ void WriteSequence(std::ofstream &file, const Sequence *seq)
 		file.write(PTR(buf), 32);
 	}
 
-	constexpr Frame_AT defAT{};
 	if(!seq->frames.empty())
 	{
-		uint32_t data[8]{};
-		data[0] = data[7] = seq->frames.size();
+		uint32_t pds2[8]{};
+		pds2[0] = pds2[7] = seq->frames.size();
 		for(const auto& frame : seq->frames)
 		{
-			data[1] += frame.hitboxes.size();
-			data[2] += frame.EF.size();
-			data[3] += frame.IF.size();
-
-			//Do not write if default constructed.
-			data[4] += (!!memcmp(&frame.AT, &defAT, sizeof(Frame_AT)));
-
-			//Find number of duplicates and write ASSM instead. Not necessary and very low priority.
-			data[6]	+= 1;
+			pds2[2] += frame.EF.size();
+			pds2[3] += frame.IF.size();
 		}
 
-		uint32_t size = sizeof(data);
+		uint32_t pds2Size = sizeof(pds2);
 
 		file.write("PDS2", 4);
-		file.write(VAL(size), 4);
-		file.write(PTR(data), size);
+		file.write(VAL(pds2Size), 4);
+		auto dataBlockPos = file.tellp();
+		file.write(PTR(pds2), pds2Size);
 
+		PatInfo info{};
 		for(const auto& frame : seq->frames)
 		{
-			WriteFrame(file, &frame);
+			WriteFrame(file, &frame, info);
 		}
+		pds2[1] = info.totalBoxes;
+		pds2[6] = info.totalAses;
+		pds2[4] = info.totalAts;
+
+		auto curPos = file.tellp();
+		file.seekp(dataBlockPos);
+		file.write(PTR(pds2), pds2Size);
+		file.seekp(curPos);
 	}
 }

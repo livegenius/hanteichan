@@ -108,6 +108,7 @@ void MainPane::Draw()
 				if(im::Button("Paste pattern")){
 					*seq = copiedPattern;
 					decoratedNames[currState.pattern] = frameData->GetDecoratedName(currState.pattern);
+					nframes = seq->frames.size() - 1;
 				}
 
 				if(im::Button("Push pattern copy"))
@@ -119,6 +120,7 @@ void MainPane::Draw()
 				{
 					PopCopies();
 					RegenerateNames();
+					nframes = seq->frames.size() - 1;
 				}
 				im::SameLine(0,20.f);
 				im::Text("%llu copies", patCopyStack.size());
@@ -128,22 +130,40 @@ void MainPane::Draw()
 			}
 			if(nframes >= 0)
 			{
+				if(currState.frame > nframes)
+					currState.frame = nframes;
 				Frame &frame = seq->frames[currState.frame];
 				if(im::TreeNode("State data"))
 				{
 					AsDisplay(&frame.AS);
+					if(im::Button("Copy AS")){
+						copiedAs = frame.AS;
+					}
+
+					im::SameLine(0,20.f); 
+					if(im::Button("Paste AS")){
+						frame.AS = copiedAs;
+					}
 					im::TreePop();
 					im::Separator();
 				}
 				if (im::TreeNode("Animation data"))
 				{
 					AfDisplay(&frame.AF);
+					if(im::Button("Copy AF")){
+						copiedAf = frame.AF;
+					}
+
+					im::SameLine(0,20.f); 
+					if(im::Button("Paste AT")){
+						frame.AF = copiedAf;
+					}
 					im::TreePop();
 					im::Separator();
 				}
 				if (im::TreeNode("Tools"))
 				{
-					im::Checkbox("Make copy current frame", &copyThisFrame);
+					im::Checkbox("Copy current frame when inserting", &copyThisFrame);
 					
 					if(im::Button("Append frame"))
 					{
@@ -163,18 +183,30 @@ void MainPane::Draw()
 					}
 
 					im::SameLine(0,20.f);
+					if(im::Button("Range tool"))
+					{
+						afjcRangeVal = 0;
+						ranges[0] = 0;
+						ranges[1] = 0;
+						rangeWindow = !rangeWindow;
+					}
+
+					if(im::Button("Copy frame"))
+					{
+						copyFrame = frame;
+					}
+
+					im::SameLine(0,20.f);
+					if(im::Button("Paste frame"))
+					{
+						frame = copyFrame;
+					}
+
 					if(im::Button("Delete frame"))
 					{
 						seq->frames.erase(seq->frames.begin()+currState.frame);
 						if(currState.frame >= seq->frames.size())
 							currState.frame--;
-					}
-
-					if(im::Button("Range paste"))
-					{
-						ranges[0] = 0;
-						ranges[1] = 0;
-						rangeWindow = !rangeWindow;
 					}
 					
 					im::TreePop();
@@ -193,19 +225,50 @@ void MainPane::Draw()
 
 	if(rangeWindow)
 	{
+		auto seq = frameData->get_sequence(currState.pattern);
+		if(ranges[0] < 0)
+			ranges[0] = 0;
+		if(ranges[1] < 0)
+			ranges[1] = 0;
+		if(ranges[0] > ranges[1])
+			ranges[0] = ranges[1];
+		if(ranges[0] + ranges[1] == 0)
+			ranges[1] = seq->frames.size()-1;
+
 		im::SetNextWindowSize(ImVec2{400,120}, ImGuiCond_FirstUseEver);
 		im::Begin("Range paste", &rangeWindow);
 		im::InputInt2("Range of frames", ranges);
 		if(im::Button("Paste color"))
 		{
-			auto seq = frameData->get_sequence(currState.pattern);
-			if(ranges[0] == ranges[1])
-				ranges[1] = seq->frames.size()-1;
-
 			for(int i = ranges[0]; i <= ranges[1] && i >= 0 && i < seq->frames.size(); i++)
 			{
 				memcpy(seq->frames[i].AF.rgba, seq->frames[currState.frame].AF.rgba, sizeof(float)*4);
 				seq->frames[i].AF.blend_mode = seq->frames[currState.frame].AF.blend_mode;
+			}
+		}
+		if(im::Button("Set landing frame"))
+		{
+			for(int i = ranges[0]; i <= ranges[1] && i >= 0 && i < seq->frames.size(); i++)
+				seq->frames[i].AF.landJump = afjcRangeVal;
+		}
+		im::SameLine(); im::SetNextItemWidth(100);
+		im::InputInt("Value##AFJC", &afjcRangeVal);
+
+		if(im::Button("Copy frames"))
+		{
+			copiedFrames.clear();
+			for(int i = ranges[0]; i <= ranges[1] && i >= 0 && i < seq->frames.size(); i++)
+				copiedFrames.push_back(seq->frames[i]);
+		}
+		im::SameLine();
+		if(im::Button("Paste frames (inserted before end range pos)"))
+		{
+			if(!copiedFrames.empty())
+			{
+				int pos = ranges[1];
+				if(pos > seq->frames.size())
+					pos = seq->frames.size();
+				seq->frames.insert(seq->frames.begin()+pos, copiedFrames.begin(), copiedFrames.end());
 			}
 		}
 		if(im::Button("Paste transform"))

@@ -25,6 +25,8 @@ currentBox(0), highlight(false)
 		else
 			boxNameList[i] = "Attack box " + std::to_string(i-24);
 	}
+
+	copiedBox = {};
 }
 
 void BoxPane::BoxStart(int x, int y)
@@ -102,12 +104,12 @@ void BoxPane::Draw()
 		BoxList &boxes = frames[currState.frame].hitboxes;
 
 		im::SameLine(0,20.f);
-		if(im::Button("Copy"))
+		if(im::Button("Copy all"))
 		{
 			copiedBoxes = boxes;
 		}
 		im::SameLine(0,20.f);
-		if(im::Button("Paste"))
+		if(im::Button("Paste all"))
 		{
 			if(copiedBoxes.size()>0)
 				boxes = copiedBoxes;
@@ -122,6 +124,17 @@ void BoxPane::Draw()
 			render->highLightN = currentBox;
 		else
 			render->highLightN = -1;
+
+		im::SameLine(0,20.f);
+		if(im::Button("Copy params"))
+		{
+			copiedBox = boxes[currentBox];
+		}
+		im::SameLine(0,20.f);
+		if(im::Button("Paste params"))
+		{
+			boxes[currentBox] = copiedBox;
+		}
 		
 
 		const int step = 8;
