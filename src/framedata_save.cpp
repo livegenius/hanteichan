@@ -469,8 +469,7 @@ void WriteFrame(std::ofstream &file, const Frame *frame, PatInfo &patInfo)
 		file.write(VAL(val), 4);
 	}
 
-	constexpr Frame_AT defAT{};
-	if(!!memcmp(&frame->AT, &defAT, sizeof(Frame_AT)) || hasAt)
+	if(hasAt)
 	{
 		WriteAT(file, &frame->AT);
 		patInfo.totalAts += 1;
@@ -566,7 +565,6 @@ void WriteSequence(std::ofstream &file, const Sequence *seq)
 		file.write(PTR(seq->codeName.data()), size);
 	}
 
-	constexpr Frame_AT defAT{};
 	if(!seq->frames.empty())
 	{
 		uint32_t pds2[8]{};

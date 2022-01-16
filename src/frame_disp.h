@@ -222,8 +222,8 @@ inline void AtDisplay(Frame_AT *at)
 
 	const char* const vectorFlags[] = {
 		"Default",
-		"Reverse",
 		"Nullify",
+		"Reverse",
 		"Both"
 	};
 
@@ -272,9 +272,9 @@ inline void AtDisplay(Frame_AT *at)
 		case 9: Tooltip("Friendly fire?"); break;
 		case 10: Tooltip("No self hitstop"); break;
 
-		case 12: Tooltip("Unknown 12"); break;
+		case 12: Tooltip("Can't be bursted"); break;
 		case 13: Tooltip("Can't be shielded"); break;
-		case 14: Tooltip("Unknown 14"); break;
+		case 14: Tooltip("Can't critical"); break;
 		
 		case 16: Tooltip("Use custom blockstop"); break;
 		case 17: Tooltip("OTG Relaunches"); break;
@@ -282,7 +282,7 @@ inline void AtDisplay(Frame_AT *at)
 		case 19: Tooltip("Unknown 19"); break;
 		case 20: Tooltip("Unknown 20"); break;
 		case 21: Tooltip("Unknown 21"); break;
-		case 22: Tooltip("Unknown 22"); break;
+		case 22: Tooltip("Unknown 22. Affects ATUH"); break;
 
 		//Not in AACC.
 		case 25: Tooltip("No hitstop on multihit?"); break; 

@@ -17,12 +17,18 @@ public:
 
 private:
 	Sequence copiedPattern{};
+	
+	std::vector<Frame> copiedFrames;
+	Frame_AS copiedAs{};
+	Frame_AF copiedAf{};
+	Frame copyFrame{};
 	bool copyThisFrame = true;
 	std::string *decoratedNames;
 
 	bool rangeWindow = false;
 	int ranges[2]{};
 	
+	int afjcRangeVal = 0;
 
 	struct SequenceWId{
 		int id;
