@@ -16,13 +16,14 @@
 		bit 10 = ?
 		bit 12 = Unknown or no effect. Akiha's 217 only
 	param4: Flagset 2
-		bit 0 = ??
+		bit 0 = Has shadow
+		bit 3 = Affects parents hitstop.
 		bit 2 = Remove when parent is thrown.
 		bit 6 = Doesn't freeze on super flash.
 		bit 7 = Doesn't move with camera.
 		bit 8 = Position is relative to opponent.
 	param8: Angle
-	param9: Related to condition 2??
+	param9: Remove move counter?
 
 2 Various effects
 	no: (Does the number itself have any meaning?)
@@ -38,7 +39,12 @@
 	50 Superflash
 		param1: X
 		param2: Y
-		param3: 1-3 type
+		param3: 1-3 type 0 = Default.
+			1 = Uses the freeze frames in the fourth parameter (doesn't affect player character).
+			2 = No freeze frames.
+			3 = No black background.
+		4: freeze frames
+		5: ?? flags? 255 disables neco ex bg art for mech.
 	210 No idea (ciel only)
 	260 No idea (arc aoko only)
 	261 idk (ryougi hsion only)
@@ -96,6 +102,7 @@
 		bit 0 Play animation
 		bit 1 Reverse vector
 		bit 3 Can't otg
+		bit 4 invert x position.
 		bit 5 Hard knockdown
 		more
 	param5: Vector id. Works only if animation plays
@@ -120,58 +127,80 @@
 6 Buttload effects
 	no:
 	0
-	2
-	3
+	1 Tremor
+		param1: duration/intensity
+	2 Invulnerability
+		1: amount of invul frames.
+	3 Afterimages:
+		1: Color. 10 - white tint. 255 disable
+		2: Amount of images
+		3: Duration
+	4 Regenerate HP (red life only?)
+		param1: amount
+	5 Change facing.
+		param1:
+			0 - Always
+			1 - Towards opponent
+			6 - Randomly.
+	6 Set movement vector
+		param1: X speed
+		param2: random added X speed
+		param12: 2=Homing? used in assist.
 	7
 	8
 	10
 	11
+	12 Move to pos
+		1,2: x,y
+		param4: ? 1 Move parent instead?
+		param5:	1 Opponent position. 2 Child position.
 	13
 	14
 	15
 	16
 	17
 	18
-	20
+	19 Prorate (used with effect 5)
+		param1: proration value
+		param2: type. 0 absolute, 1 multiplicative, 2 substractive
+	20 Recover guard bar
+		1: amount
+		3: ?1
 	21
 	22
 	23
-	24
+	24 Guard bar redness (see _type.txt)
+		1: amount?
+		3: ? Has to be 1 to affect the quality. Otherwise it just "touches" it? 
 	50
-	100
+	100 Add to _c.txt move counter:
+		1: counter id + number?
 	101
-	102
+	102 Use dash counter:
+		1: Number of counters to use up
 	103
-	
+	105 Set variable?
+		param1: Variable id.
+		param2: Value.
+		param3: Add instead of setting.
+
 	107
 	110
-	111
-	112
+	111 Save/load vector:
+		1:? 0 = save, 1 = load.
+		2: id? always seems to be 1
+		3: Gravity on load. Only used when saving.
+	112 Proration, Pre hit.
+		1: amount
+		2: type.
 	114
-	150
+	150 Assist call:
+		1: Puppet's pattern
 	151
 	152
 	155
 	200
 	252
-	1 Tremor
-		param1: duration/intensity
-	4 Regenerate HP (red life only?)
-		param1: amount
-	5 Unknown, used in throws.
-		param1:
-			6 - Randomly makes actors rotate in the opposite direction.
-	6 Set movement vector
-		param1: X speed
-		param2: random added X speed
-	12 Move parent to pos?
-		param5:	1 Opponent position. 2 Child position.
-	19 Prorate (used with effect 5)
-		param1: proration value
-		param2: type. 0 absolute, 1 multiplicative, 2 substractive
-	105 Set variable?
-		param1: Variable id.
-		param2: Value.
 
 8 Spawn actor from effect.ha6
 
@@ -190,6 +219,7 @@
 	param1,2: X,Y
 	param3,4: H,W
 	param5: Number of adjacent patterns to spawn. They don't repeat.
+	param6: Amount
 	param7: Flagset 1 Same as effect 1
 	param8: Flagset 2
 
@@ -197,8 +227,8 @@
 	no: pattern of opponent
 	param1,2: XY. Ignored if it's not the first effect 14 in the frame.
 	param3: Rotation. Not sure about the unit but large values like 1000 and 4000 are used.
-	param4: Vector id. If not 0 it plays the animation.
-	param5: Which part to grab
+	param4: Flags. Same as effect 4.
+	param5: Which part to grab. If flag bit 0 is 0. Otherwise it's a vector id.
 		0 = Origin
 		1-3 = Special box 10-12 
 	param6: Untech time. Used with vectors.

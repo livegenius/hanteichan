@@ -10,14 +10,14 @@
 		3 = Despawn when outside the screen
 	param2: 0-1 Unknown
 	param3: 1 = Despawn at animation end.
-	param4: 1 11 21 31 41 51 61 62 71 79 81 91 - Appears only if param3 is 1. Unknown. Related to param9 of effect1?
+	param4: Remove move counter.
 
 3 Branch on hit
 	param1: Frame to jump to. Add 10000 for pattern jump.
 	param2:
 		0 = only on hit
 		1 = on block too
-		2
+		2 = clash
 		3
 		5 = Only on block
 		6
@@ -28,10 +28,13 @@
 		2 = only on airborne opponent
 
 4 Vector check
+	1: frame to jump to
+	2: horizontal, 1 = when moving right, 2 = left, 0 = don't care.
+	3: vertical, 1 = when moving down
 5 KO flag check
 6 Lever & Trigger check 1
-	param1: ?? often 255
-	param2: Button(s) that needs to be pressed. It's a flag. Values can be OR'd
+	param1: numpad dir. 255 = ignore
+	param2: Button(s) that needs to be pressed. It's a flag. Values can be OR'd. 255 = ignore
 		1 = a
 		2 = b
 		4 = c
@@ -40,8 +43,16 @@
 	param4: Flags
 		1 = Negate the condition?
 		2 = Must be held
+		3 = If 1 any button of them can be pressed. If 0 all of them must be pressed.
 
 7 Lever & Trigger check 2
+	1: numpad dir
+	2: button
+	3: Pattern
+	4: flags same as 6
+	5: ?
+	6: 1 Probably relative jump.
+	
 8 Random check (runs every subframe)
 	param1: frame to jump to
 	param2: Chance (max 512)
@@ -49,17 +60,30 @@
 10 Loop counter check	(Unused?)
 11 Additional command input check
 12 Opponent distance check
+	1: frame
+	2: Distance?
 13 Screen corner check
+	1: Pat/Fr
+	2: 1 = Pattern. 0 = frame
+	3: Dist?255
+	4: 5?
+	5: ?1
 
 14 Box collision check
 	param1: Frame to jump to
-	param2: No idea
-	param3: Probably blue box index?
+	param3: 0 opponent, 1 mine
+	param2: 0 hit. 1 hurt. 2 col. 3 bb1 . 4 bb2... 9 bb7. 1000?
+	4: Duration??
+	5: 1: Negate
 
 15 Box collision check (Capture)
+	Same as 14 except it also hitgrabs whatever connected.
+	
 16 Be affected by scrolling
 17 Branch according to number of hits within animation
 18 Check main/trunk animation and jump.
+	1: Frame
+	2: ?256. Jumps when summoner's animation ends.
 19 Projectile box col check. (Reflection)
 20 Box collision check 2
 
@@ -72,8 +96,9 @@
 22 BG number check	(Unused?)
 23 BG type check	(Unused?)
 24 Projectile flag check
+	
 25 Variable comparison
-	param1: Frame to jump to
+	param1: Frame to jump to. 10K for pattern.
 	param2: Variable id
 	param3: Value to compare
 	param4: Type of check??
@@ -81,6 +106,9 @@
 		1 Less than
 		2 Equal to
 26 Check lever and change vector
+	1: 10
+	2: 128
+	
 27 Branch when parent gets hurt 
 	param1: Frame/Pattern to jump to
 	param2: 0 Pattern, 1 Frame
@@ -100,6 +128,7 @@
 
 33 If sound effect is playing
 34 Homing
+	2: Acceleration
 35 Custom cancel command check, multiple. Can input moves with bit5 on
 	param1:
 		0 = always
@@ -115,9 +144,13 @@
 	A leftover from Re-Act? The color selected doesn't affect anything.
 	param1: pattern to jump to.
 
-38 ?
+38 Set variable on hit.
+	1: Value:
+	4: Variable id:
 39 ?
-40 ?
+40 Jump on frame time? Speed? Position?
+	1: Frame
+	2: amount
 41 ?
 42 ?
 
@@ -129,8 +162,15 @@
 	param 3: Frame to jump to if the airthrow is part of a combo
 	
 53 ?
-54 ?
+54 Jump when parent gets hurt? Used by aoko's 421
+	1: frame
 55 ?
 60 ?
 70 ?
 100 ?
+
+Other missing data:
+Hitflags:
+12 = Can't be bursted.
+14 = Can't critical
+22 = ?Maybe something to do with extra gravity. H-Tohno's 6[c] and all 6aa use it.
