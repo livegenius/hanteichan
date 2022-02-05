@@ -4,6 +4,7 @@
 #include "filedialog.h"
 #include "ini.h"
 
+#include <sstream>
 #include <fstream>
 #include <filesystem>
 
