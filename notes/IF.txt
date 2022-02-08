@@ -21,7 +21,7 @@
 		3
 		5 = Only on block
 		6
-		7
+		7 = Not on hit?
 		100 = only on shield
 	param3: 0 any
 		1 = only on grounded opponent
@@ -56,6 +56,10 @@
 8 Random check (runs every subframe)
 	param1: frame to jump to
 	param2: Chance (max 512)
+	param3: if 1 jump to pattern.
+	param4: Number of consecutive patterns.
+	
+	
 9 Loop counter settings	(Unused?)
 10 Loop counter check	(Unused?)
 11 Additional command input check
@@ -85,6 +89,8 @@
 	1: Frame
 	2: ?256. Jumps when summoner's animation ends.
 19 Projectile box col check. (Reflection)
+	No parameters. Esp. Box 1
+	
 20 Box collision check 2
 
 21 Opponent's character number check
