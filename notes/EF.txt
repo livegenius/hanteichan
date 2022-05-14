@@ -137,6 +137,8 @@
 		3: Duration
 	4 Regenerate HP (red life only?)
 		param1: amount
+		param2: meter
+		param3: ?1
 	5 Change facing.
 		param1:
 			0 - Always
@@ -156,7 +158,11 @@
 		param4: ? 1 Move parent instead?
 		param5:	1 Opponent position. 2 Child position.
 	13
-	14
+	14 Change opponent's health/meter. Used with if 14
+		1: Some flag that controls who gets the change. Weird interaction with IF14. If 0 it only affects the opponent.
+		2: health change amount
+		3: meter change amount
+		4: ?7
 	15
 	16
 	17
