@@ -1,17 +1,9 @@
 #ifndef DRAWWINDOW_H_GUARD
 #define DRAWWINDOW_H_GUARD
-#include "framedata.h"
-#include "render.h"
 
-struct FrameState
-{
-	int pattern;
-	int frame;
-	std::vector<Layer> *layers;
-	bool animating;
-	int animeSeq;
-	int selectedLayer = 0;
-};
+#include "render.h"
+#include "framestate.h"
+
 //ImGui Windows that draw themselves. Just for utility.
 class DrawWindow
 {

@@ -44,6 +44,7 @@ private:
 	CG cg;
 	Parts parts;
 	int curPalette;
+	float reScaleFactor = 1.0;
 
 	//Animation
 	int duration = 0;

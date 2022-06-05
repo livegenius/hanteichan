@@ -22,9 +22,10 @@ struct Layer{
 	int priority;
 };
 
+template<template<typename> class Allocator = std::allocator>
 struct Frame_AF {
 	// rendering data
-	std::vector<Layer> layers;
+	std::vector<Layer, Allocator<Layer>> layers;
 	int		duration;
 	/* Animation action
 	0 (default): End
@@ -142,17 +143,20 @@ struct Frame_IF {
 	int		parameters[9]; //Max used value is 9. I don't know if parameters beyond have any effect..
 };
 
+
+template<template<typename> class Allocator = std::allocator>
 struct Frame {
-	Frame_AF AF = {};
+	Frame_AF<Allocator> AF = {};
 	Frame_AS AS = {};
 	Frame_AT AT = {};
 
-	std::vector<Frame_EF> EF;
-	std::vector<Frame_IF> IF;
+	std::vector<Frame_EF,Allocator<Frame_EF>> EF;
+	std::vector<Frame_IF,Allocator<Frame_EF>> IF;
 
 	BoxList hitboxes;
 };
 
+template<template<typename> class Allocator = std::allocator>
 struct Sequence {
 	// sequence property data
 	std::string	name;
@@ -168,27 +172,25 @@ struct Sequence {
 	bool empty = true;
 	bool initialized = false;
 
-	std::vector<Frame> frames;
+	std::vector<Frame<Allocator>, Allocator<Frame<Allocator>>> frames;
 
 	Sequence();
 };
 
 class FrameData {
 private:
-	unsigned int	m_nsequences;
+	unsigned int m_nsequences;
 
-	
 public:
-
 	bool m_loaded;
-	std::vector<Sequence> m_sequences;
+	std::vector<Sequence<>> m_sequences;
 	void initEmpty();
 	bool load(const char *filename, bool patch = false);
 	void save(const char *filename);
 
 	int get_sequence_count();
 
-	Sequence* get_sequence(int n);
+	Sequence<>* get_sequence(int n);
 	std::string GetDecoratedName(int n);
 
 	void Free();
@@ -197,7 +199,7 @@ public:
 	~FrameData();
 };
 
-void WriteSequence(std::ofstream &file, const Sequence *seq);
+void WriteSequence(std::ofstream &file, const Sequence<> *seq);
 
 
 #endif /* FRAMEDATA_H_GUARD */

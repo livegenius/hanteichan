@@ -23,6 +23,8 @@
 
 #include "misc.h"
 
+#include "winbase.h"
+
 MainFrame::MainFrame(ContextGl *context_):
 context(context_),
 currState{},
@@ -37,6 +39,8 @@ render(&cg, &parts)
 	currState.layers = nullptr;
 	LoadSettings();
 	stbi_flip_vertically_on_write(true);
+
+	
 }
 
 MainFrame::~MainFrame()
@@ -626,6 +630,29 @@ void MainFrame::Menu(unsigned int errorPopupId)
 							frame.AF.layers.resize(3);
 					}
 				}
+			}
+			if (ImGui::BeginMenu("Scale all layers")){
+				ImGui::InputFloat("Factor", &reScaleFactor);
+				if (ImGui::Button("Apply", ImVec2(120, 0)))
+				{
+					for(auto &seq : framedata.m_sequences)
+					{
+						for(auto &frame : seq.frames)
+						{
+							for(auto &layer : frame.AF.layers)
+							{
+									layer.scale[0] *= reScaleFactor;
+									layer.scale[1] *= reScaleFactor;
+							}
+							for (auto &[k,v] : frame.hitboxes)
+							{
+								for(int jii = 0; jii < 4; ++jii)
+									v.xy[jii] *= reScaleFactor;
+							}
+						}
+					}
+				}
+				ImGui::EndMenu();
 			}
 			ImGui::EndMenu();
 		}
