@@ -1,6 +1,7 @@
 #include "tinyalloc.h"
 #include <stdint.h>
 #include <string.h>
+#include <assert.h>
 
 #ifdef TA_DEBUG
 extern void print_s(char *);
@@ -19,12 +20,14 @@ struct Block {
 };
 
 typedef struct {
+    const void *virtual_adress;
     Block *free;   // first free block
     Block *used;   // first used block
     Block *fresh;  // first available blank block
     size_t top;    // top free addr
 } Heap;
 
+static int init_times = 0;
 static Heap *heap = NULL;
 static const void *heap_limit = NULL;
 static size_t heap_split_thresh;
@@ -112,30 +115,32 @@ static void compact() {
 }
 #endif
 
-bool ta_init(const void *base, const void *limit, const size_t heap_blocks, const size_t split_thresh, const size_t alignment) {
-    const char * const magic_string = "HANTEISHAREDMEM";
-    char* mem_string = (char*)base;
-    heap = (Heap *)(mem_string+16);
+bool ta_init(const void *base, const void *limit, const size_t heap_blocks, const size_t split_thresh, const size_t alignment, bool existing) {
+    assert(init_times == 0);
+
+    heap = (Heap *)(base);
     heap_limit = limit;
     heap_split_thresh = split_thresh;
     heap_alignment = alignment;
     heap_max_blocks = heap_blocks;
-    if(strncmp(magic_string, mem_string, 16) != 0)
+    if(!existing)
     {
-        strncpy_s(mem_string, 16, magic_string, 16);
         heap->free   = NULL;
         heap->used   = NULL;
         heap->fresh  = (Block *)(heap + 1);
         heap->top    = (size_t)(heap->fresh + heap_blocks);
+        heap->virtual_adress = base;
+
+        Block *block = (Block *)(heap + 1);
+        size_t i     = heap_max_blocks - 1;
+        while (i--) {
+            block->next = block + 1;
+            block++;
+        }
+        block->next = NULL;
     }
 
-    Block *block = heap->fresh;
-    size_t i     = heap_max_blocks - 1;
-    while (i--) {
-        block->next = block + 1;
-        block++;
-    }
-    block->next = NULL;
+    init_times++;
     return true;
 }
 

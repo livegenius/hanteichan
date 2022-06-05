@@ -17,8 +17,6 @@ public:
 	void AdvanceBox(int dir);
 
 private:
-	BoxList copiedBoxes;
-	Hitbox copiedBox;
 	std::string boxNameList[33];
 	int currentBox;
 	bool highlight;

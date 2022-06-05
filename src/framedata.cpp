@@ -9,12 +9,6 @@
 int maxCount = 0;
 std::set<int> numberSet;
 
-Sequence::Sequence():
-psts(0), level(0), flag(0),
-empty(true),
-initialized(false)
-{}
-
 void FrameData::initEmpty()
 {
 	Free();
@@ -139,7 +133,7 @@ int FrameData::get_sequence_count() {
 	return m_nsequences;
 }
 
-Sequence* FrameData::get_sequence(int n) {
+Sequence_T<>* FrameData::get_sequence(int n) {
 	if (!m_loaded) {
 		return 0;
 	}

@@ -9,22 +9,30 @@ constexpr const wchar_t *sharedMemHandleName = L"hanteichan-shared_mem";
 
 FrameState::FrameState()
 {
-	constexpr size_t bufSize = 0x1000000; //32MB should be plenty
+	SYSTEM_INFO sInfo;
+	GetSystemInfo(&sInfo);
+	size_t bufSize = 0x100*sInfo.dwAllocationGranularity; //16MB should be plenty
+	size_t appendSize = (1+sizeof(CopyData)/sInfo.dwAllocationGranularity)*sInfo.dwAllocationGranularity;
 
 	sharedMemHandle = CreateFileMapping(
 		INVALID_HANDLE_VALUE,    // use paging file
 		NULL,                    // default security
 		PAGE_READWRITE,          // read/write access
 		0,                       // maximum object size (high-order DWORD)
-		bufSize,                // maximum object size (low-order DWORD)
-		sharedMemHandleName);                 // name of mapping object
+		bufSize+appendSize,                // maximum object size (low-order DWORD)
+		sharedMemHandleName);   // name of mapping object
 
-	sharedMem = MapViewOfFile(
+	auto exists = GetLastError();
+
+	void *baseAddress = (void*)((size_t)sInfo.lpMinimumApplicationAddress+sInfo.dwAllocationGranularity*0x5000);
+
+	sharedMem = MapViewOfFileEx(
 		sharedMemHandle,
 		FILE_MAP_ALL_ACCESS,
 		0,
 		0,
-		bufSize);
+		bufSize+appendSize,
+		baseAddress);
 
 	if(sharedMemHandle == nullptr || sharedMem == nullptr)
 	{
@@ -35,11 +43,17 @@ FrameState::FrameState()
 		abort();
 	}
 
-	ta_init(sharedMem, (char*)sharedMem+bufSize, 65535, 256, 8);
+	ta_init(sharedMem, (char*)sharedMem+bufSize, 65535, 256, 16, exists);
+	
+	if(!exists)
+		copied = new((char*)sharedMem+bufSize) CopyData;
+	else
+		copied = reinterpret_cast<CopyData*>((char*)sharedMem+bufSize);
 }
 
 FrameState::~FrameState()
 {
+	//copied->~CopyData();
 	UnmapViewOfFile(sharedMem);
 	CloseHandle(sharedMemHandle);
 }

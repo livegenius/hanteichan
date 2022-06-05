@@ -26,7 +26,7 @@ currentBox(0), highlight(false)
 			boxNameList[i] = "Attack box " + std::to_string(i-24);
 	}
 
-	copiedBox = {};
+	currState.copied->box = {};
 }
 
 void BoxPane::BoxStart(int x, int y)
@@ -106,13 +106,13 @@ void BoxPane::Draw()
 		im::SameLine(0,20.f);
 		if(im::Button("Copy all"))
 		{
-			copiedBoxes = boxes;
+			currState.copied->boxes = boxes;
 		}
 		im::SameLine(0,20.f);
 		if(im::Button("Paste all"))
 		{
-			if(copiedBoxes.size()>0)
-				boxes = copiedBoxes;
+			if(currState.copied->boxes.size()>0)
+				boxes = currState.copied->boxes;
 		}
 
 		im::Checkbox("Highlight selected", &highlight);
@@ -128,12 +128,12 @@ void BoxPane::Draw()
 		im::SameLine(0,20.f);
 		if(im::Button("Copy params"))
 		{
-			copiedBox = boxes[currentBox];
+			currState.copied->box = boxes[currentBox];
 		}
 		im::SameLine(0,20.f);
 		if(im::Button("Paste params"))
 		{
-			boxes[currentBox] = copiedBox;
+			boxes[currentBox] = currState.copied->box;
 		}
 		
 

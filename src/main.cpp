@@ -36,6 +36,8 @@ static bool dragLeft = false, dragRight = false;
 static POINT mousePos;
 bool init = false;
 
+MainFrame* mf = nullptr;
+
 typedef BOOL (WINAPI *MINIDUMPWRITEDUMP)(HANDLE, DWORD, HANDLE, MINIDUMP_TYPE,
 	CONST PMINIDUMP_EXCEPTION_INFORMATION, CONST PMINIDUMP_USER_STREAM_INFORMATION, CONST PMINIDUMP_CALLBACK_INFORMATION);
 LONG WINAPI UnhandledException(_EXCEPTION_POINTERS* apExceptionInfo)
@@ -184,7 +186,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		clock.targetSpf = 1/60.0;
 		while(LoopEvents())
 		{
-			MainFrame* mf = (MainFrame*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+			//MainFrame* mf = (MainFrame*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 			if(mf)
 			{
 				mf->Draw();
@@ -199,7 +201,7 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE, PWSTR pCmdLine, int nCmdShow
 		{
 			TranslateMessage(&msg);
 			DispatchMessage(&msg);
-			MainFrame* mf = (MainFrame*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+			//MainFrame* mf = (MainFrame*)GetWindowLongPtr(hwnd, GWLP_USERDATA);
 			if(mf)
 				mf->Draw();
 		}
@@ -219,7 +221,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 	if (ImGui_ImplWin32_WndProcHandler(hWnd, msg, wParam, lParam))
 		return true;
 
-	MainFrame* mf = (MainFrame*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
+	//MainFrame* mf = (MainFrame*)GetWindowLongPtr(hWnd, GWLP_USERDATA);
 	switch (msg)
 	{
 	case WM_CREATE:
@@ -238,7 +240,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 			io.IniFilename = iniLocation;
 			InitIni();
 
-			MainFrame* mf = new MainFrame(context);
+			mf = new MainFrame(context);
 			SetWindowLongPtr(hWnd, GWLP_USERDATA, (LONG_PTR)mf);
 			
 			MoveWindow(hWnd, gSettings.posX, gSettings.posY, gSettings.winSizeX, gSettings.winSizeY, false);
@@ -283,14 +285,14 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		return 0;
 	case WM_KEYDOWN:
-		if(!mf->drawImgui || !ImGui::GetIO().WantCaptureKeyboard)
+		if(mf && (!mf->drawImgui || !ImGui::GetIO().WantCaptureKeyboard))
 		{
 			if(mf->HandleKeys(wParam))
 				return 0;
 		}
 		break;
 	case WM_RBUTTONDOWN:
-		if(!mf->drawImgui || !ImGui::GetIO().WantCaptureMouse)
+		if(mf && (!mf->drawImgui || !ImGui::GetIO().WantCaptureMouse))
 		{
 			dragRight = true;
 			GetCursorPos(&mousePos);
@@ -311,7 +313,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_LBUTTONDOWN:
-		if(!mf->drawImgui || !ImGui::GetIO().WantCaptureMouse)
+		if(mf && (!mf->drawImgui || !ImGui::GetIO().WantCaptureMouse))
 		{
 			dragLeft = true;
 			GetCursorPos(&mousePos);
@@ -331,7 +333,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
 		}
 		break;
 	case WM_MOUSEMOVE:
-		if(dragLeft || dragRight)
+		if(mf && (dragLeft || dragRight))
 		{
 			POINT newMousePos;
 			newMousePos.x = (short) LOWORD(lParam);

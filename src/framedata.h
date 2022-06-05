@@ -23,7 +23,7 @@ struct Layer{
 };
 
 template<template<typename> class Allocator = std::allocator>
-struct Frame_AF {
+struct Frame_AF_T {
 	// rendering data
 	std::vector<Layer, Allocator<Layer>> layers;
 	int		duration;
@@ -52,6 +52,26 @@ struct Frame_AF {
 	bool afjh;
 	uint8_t param[4]; //Let's hope they're right;
 	int frameId;
+
+	template<template<typename> class FromT>
+	Frame_AF_T<Allocator>& operator=(const Frame_AF_T<FromT>& from) {
+		duration = from.duration;
+		aniType = from.aniType; 
+		aniFlag = from.aniFlag;
+		jump = from.jump;
+		landJump = from.landJump;
+		interpolationType = from.interpolationType; 
+		priority = from.priority;
+		loopCount = from.loopCount;
+		loopEnd = from.loopEnd; 
+		AFRT = from.AFRT;
+		afjh = from.afjh;
+		memcpy(param, from.param, sizeof(param));
+		frameId = from.frameId;
+		layers.resize(from.layers.size());
+		memcpy(layers.data(), from.layers.data(), sizeof(Layer)*from.layers.size()); 
+		return *this;
+	}
 };
 
 struct Frame_AS {
@@ -145,22 +165,54 @@ struct Frame_IF {
 
 
 template<template<typename> class Allocator = std::allocator>
-struct Frame {
-	Frame_AF<Allocator> AF = {};
+struct Frame_T {
+	Frame_AF_T<Allocator> AF = {};
 	Frame_AS AS = {};
 	Frame_AT AT = {};
 
 	std::vector<Frame_EF,Allocator<Frame_EF>> EF;
-	std::vector<Frame_IF,Allocator<Frame_EF>> IF;
+	std::vector<Frame_IF,Allocator<Frame_IF>> IF;
 
-	BoxList hitboxes;
+	BoxList_T<Allocator> hitboxes{};
+
+	template<template<typename> class FromT>
+	Frame_T<Allocator>& operator=(const Frame_T<FromT>& from) {
+		AF = from.AF;
+		AS = from.AS;
+		AT = from.AT;
+		EF.resize(from.EF.size());
+		memcpy(EF.data(), from.EF.data(), sizeof(Layer)*from.EF.size()); 
+		IF.resize(from.IF.size());
+		memcpy(IF.data(), from.IF.data(), sizeof(Layer)*from.IF.size()); 
+
+		hitboxes = from.hitboxes;
+		return *this;
+	};
+
+	//Cast to different allocator.
+	template<template<typename> class ToT>
+	operator Frame_T<ToT>() const {
+		Frame_T<ToT> casted;
+		casted.operator=(*this);
+		return casted;
+	};
 };
 
+//Works only for POD vectors.
+template<typename Type, typename A, typename B>
+void CopyVectorContents(A& dst, const B& src)
+{
+	static_assert(sizeof(A::value_type) == sizeof(Type) && sizeof(B::value_type) == sizeof(Type), "Vector element types don't match");
+	dst.resize(src.size());
+	memcpy(dst.data(), src.data(), sizeof(Type)*src.size()); 
+}
+
+
 template<template<typename> class Allocator = std::allocator>
-struct Sequence {
+struct Sequence_T {
 	// sequence property data
-	std::string	name;
-	std::string codeName;
+	std::basic_string<char, std::char_traits<char>, Allocator<char>> name;
+	std::basic_string<char, std::char_traits<char>, Allocator<char>> codeName;
 	
 	int psts = 0;
 	int level = 0;
@@ -172,9 +224,23 @@ struct Sequence {
 	bool empty = true;
 	bool initialized = false;
 
-	std::vector<Frame<Allocator>, Allocator<Frame<Allocator>>> frames;
+	std::vector<Frame_T<Allocator>, Allocator<Frame_T<Allocator>>> frames;
 
-	Sequence();
+	template<template<typename> class FromT>
+	Sequence_T<Allocator>& operator=(const Sequence_T<FromT>& from) {
+		name = from.name;
+		codeName = from.name;
+		psts = from.psts;
+		level = from.level;
+		flag = from.flag;
+		pups = from.pups;
+		empty = from.empty;
+		initialized = from.initialized;
+		frames.resize(from.frames.size());
+		for(int i = 0; i < frames.size(); ++i)
+			frames[i] = from.frames[i];
+		return *this;
+	}
 };
 
 class FrameData {
@@ -183,14 +249,14 @@ private:
 
 public:
 	bool m_loaded;
-	std::vector<Sequence<>> m_sequences;
+	std::vector<Sequence_T<>> m_sequences;
 	void initEmpty();
 	bool load(const char *filename, bool patch = false);
 	void save(const char *filename);
 
 	int get_sequence_count();
 
-	Sequence<>* get_sequence(int n);
+	Sequence_T<>* get_sequence(int n);
 	std::string GetDecoratedName(int n);
 
 	void Free();
@@ -199,7 +265,10 @@ public:
 	~FrameData();
 };
 
-void WriteSequence(std::ofstream &file, const Sequence<> *seq);
+void WriteSequence(std::ofstream &file, const Sequence_T<> *seq);
 
+using Frame = Frame_T<std::allocator>;
+using Frame_AF = Frame_AF_T<std::allocator>;
+using Sequence = Sequence_T<std::allocator>;
 
 #endif /* FRAMEDATA_H_GUARD */

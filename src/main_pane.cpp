@@ -1,7 +1,8 @@
 #include "main_pane.h"
 #include "pattern_disp.h"
 #include "frame_disp.h"
-#include <imgui.h>	
+#include <imgui.h>
+
 
 MainPane::MainPane(Render* render, FrameData *framedata, FrameState &fs) : DrawWindow(render, framedata, fs),
 decoratedNames(nullptr)
@@ -102,11 +103,11 @@ void MainPane::Draw()
 				}
 
 				if(im::Button("Copy pattern")){
-					copiedPattern = *seq;
+					currState.copied->pattern = *seq;
 				}
 				im::SameLine(0,20.f); 
 				if(im::Button("Paste pattern")){
-					*seq = copiedPattern;
+					*seq = currState.copied->pattern;
 					decoratedNames[currState.pattern] = frameData->GetDecoratedName(currState.pattern);
 					nframes = seq->frames.size() - 1;
 				}
@@ -137,12 +138,12 @@ void MainPane::Draw()
 				{
 					AsDisplay(&frame.AS);
 					if(im::Button("Copy AS")){
-						copiedAs = frame.AS;
+						currState.copied->as = frame.AS;
 					}
 
 					im::SameLine(0,20.f); 
 					if(im::Button("Paste AS")){
-						frame.AS = copiedAs;
+						frame.AS = currState.copied->as;
 					}
 					im::TreePop();
 					im::Separator();
@@ -151,12 +152,12 @@ void MainPane::Draw()
 				{
 					AfDisplay(&frame.AF, currState.selectedLayer);
 					if(im::Button("Copy AF")){
-						copiedAf = frame.AF;
+						currState.copied->af = frame.AF;
 					}
 
 					im::SameLine(0,20.f); 
-					if(im::Button("Paste AT")){
-						frame.AF = copiedAf;
+					if(im::Button("Paste AF")){
+						frame.AF = currState.copied->af;
 					}
 					im::TreePop();
 					im::Separator();
@@ -199,13 +200,13 @@ void MainPane::Draw()
 
 					if(im::Button("Copy frame"))
 					{
-						copyFrame = frame;
+						currState.copied->frame = frame;
 					}
 
 					im::SameLine(0,20.f);
 					if(im::Button("Paste frame"))
 					{
-						frame = copyFrame;
+						frame = currState.copied->frame;
 					}
 
 					if(im::Button("Delete frame"))
@@ -266,19 +267,19 @@ void MainPane::Draw()
 
 		if(im::Button("Copy frames"))
 		{
-			copiedFrames.clear();
+			currState.copied->frames.clear();
 			for(int i = ranges[0]; i <= ranges[1] && i >= 0 && i < seq->frames.size(); i++)
-				copiedFrames.push_back(seq->frames[i]);
+				currState.copied->frames.push_back(seq->frames[i]);
 		}
 		im::SameLine();
 		if(im::Button("Paste frames (inserted before end range pos)"))
 		{
-			if(!copiedFrames.empty())
+			if(!currState.copied->frames.empty())
 			{
 				int pos = ranges[1];
 				if(pos > seq->frames.size())
 					pos = seq->frames.size();
-				seq->frames.insert(seq->frames.begin()+pos, copiedFrames.begin(), copiedFrames.end());
+				seq->frames.insert(seq->frames.begin()+pos, currState.copied->frames.begin(), currState.copied->frames.end());
 			}
 		}
 		if(im::Button("Paste transform (Current layer only)"))

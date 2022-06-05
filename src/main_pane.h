@@ -16,10 +16,6 @@ public:
 	void RegenerateNames();
 
 private:
-	Sequence copiedPattern{};
-	
-	std::vector<Frame> copiedFrames;
-
 	bool copyThisFrame = true;
 	std::string *decoratedNames;
 

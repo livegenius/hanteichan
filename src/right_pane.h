@@ -13,11 +13,7 @@ public:
 	void Draw();
 
 private:
-	Frame_AT copiedAt{};
-	std::vector<Frame_IF> copiedIfList;
-	std::vector<Frame_EF> copiedEfList;
-	Frame_IF copiedIf{};
-	Frame_EF copiedEf{};
+
 };
 
 #endif /* RIGHTPANEASDASD_H_GUARD */
