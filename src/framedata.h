@@ -228,8 +228,12 @@ struct Sequence_T {
 
 	template<template<typename> class FromT>
 	Sequence_T<Allocator>& operator=(const Sequence_T<FromT>& from) {
-		name = from.name;
-		codeName = from.name;
+		name.resize(from.name.size());
+		memcpy(name.data(), from.name.data(), from.name.size());
+
+		codeName.resize(from.codeName.size());
+		memcpy(codeName.data(), from.codeName.data(), from.codeName.size());
+
 		psts = from.psts;
 		level = from.level;
 		flag = from.flag;

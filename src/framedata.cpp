@@ -86,7 +86,10 @@ void FrameData::save(const char *filename)
 		if( (box.xy[0] == box.xy[2]) ||
 			(box.xy[1] == box.xy[3]) )
 		{
-			frame.hitboxes.erase(it++);
+			auto newIt = it;
+			newIt++;
+			frame.hitboxes.erase(it);
+			it = newIt;
 		}
 		else
 		{
